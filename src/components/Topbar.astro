@@ -1,76 +1,84 @@
 ---
 /**
- * Chirpy-style topbar: hamburger (mobile only) | breadcrumb | site title (mobile) | search
+ * Chirpy-style topbar: hamburger (mobile only) | breadcrumb | site title (mobile) | search | theme toggle
  * Sits inside the main column, below the header.
  */
-import { SITE, type Locale } from '../config';
+import { SITE } from '../config';
 import { useTranslations, localizedPath } from '../i18n/utils';
 import { Icon } from 'astro-icon/components';
 import SearchButton from './islands/SearchButton.astro';
-import LanguageSwitcher from './islands/LanguageSwitcher.astro';
+import ThemeToggle from './islands/ThemeToggle.astro';
 
 interface Props {
-  locale: Locale;
   /**
    * Breadcrumb segments. The last segment is treated as the current page.
    * Pass [] to show only "Home".
    */
   crumbs?: Array<{ label: string; href?: string }>;
-  /**
-   * Locales for which a translation actually exists. Forwarded to the
-   * language switcher so it only links to working pages.
-   */
-  availableLocales?: readonly Locale[];
 }
 
-const { locale, crumbs = [], availableLocales } = Astro.props;
-const t = useTranslations(locale);
-const home = localizedPath('/', locale);
+const { crumbs = [] } = Astro.props;
+const t = useTranslations();
+const home = localizedPath('/');
 ---
 
-<header class="chirpy-topbar" aria-label="Top Bar">
-  <div class="flex flex-1 items-center gap-2 px-1">
-    <button
-      type="button"
-      data-sidebar-toggle
-      class="btn btn-ghost btn-sm btn-square lg:hidden"
-      aria-label={t('nav.toggleMenu')}
+<header
+  class="border-base-300 bg-base-200 sticky top-0 z-30 min-h-(--height-topbar) border-b py-2 sm:py-3 lg:border-b-0"
+  aria-label="Top Bar"
+>
+  <div
+    class="container mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-8"
+  >
+    <div class="flex min-w-0 flex-1 items-center gap-2">
+      <button
+        type="button"
+        data-sidebar-toggle
+        class="chirpy-theme lg:hidden"
+        aria-label={t('nav.toggleMenu')}
+        title={t('nav.toggleMenu')}
+      >
+        <Icon name="lucide:menu" width={18} height={18} />
+      </button>
+
+      <nav
+        aria-label="Breadcrumb"
+        class="text-base-content/70 hidden min-w-0 flex-1 text-sm sm:block"
+      >
+        <ol class="chirpy-breadcrumbs flex min-w-0 items-center gap-1">
+          <li class="shrink-0">
+            <a href={home} class="hover:text-primary">{t('nav.home')}</a>
+          </li>
+          {
+            crumbs.map((crumb, i) => (
+              <li class="flex min-w-0 items-center gap-1">
+                {crumb.href && i < crumbs.length - 1 ? (
+                  <a href={crumb.href} class="hover:text-primary block truncate">
+                    {crumb.label}
+                  </a>
+                ) : (
+                  <span class="text-base-content block truncate font-medium">{crumb.label}</span>
+                )}
+              </li>
+            ))
+          }
+        </ol>
+      </nav>
+
+      {/* Mobile site title */}
+      <a
+        href={home}
+        class="ml-1 truncate text-base font-semibold sm:hidden"
+        aria-label={SITE.title}
+      >
+        {SITE.name}
+      </a>
+    </div>
+
+    <div
+      class="flex shrink-0 items-center justify-start gap-2 min-[1440px]:w-60 min-[1650px]:w-[16.25rem] xl:w-(--width-panel) [&_.search-pill]:min-w-0 [&_.search-pill]:flex-1"
     >
-      <Icon name="lucide:menu" width={18} height={18} />
-    </button>
-
-    <nav aria-label="Breadcrumb" class="text-base-content/70 hidden truncate text-sm sm:block">
-      <ol class="flex items-center gap-1">
-        <li>
-          <a href={home} class="hover:text-primary">{t('nav.home')}</a>
-        </li>
-        {
-          crumbs.map((crumb, i) => (
-            <li class="flex items-center gap-1 truncate">
-              <span aria-hidden="true" class="text-base-content/40">
-                /
-              </span>
-              {crumb.href && i < crumbs.length - 1 ? (
-                <a href={crumb.href} class="hover:text-primary">
-                  {crumb.label}
-                </a>
-              ) : (
-                <span class="text-base-content truncate font-medium">{crumb.label}</span>
-              )}
-            </li>
-          ))
-        }
-      </ol>
-    </nav>
-
-    {/* Mobile site title */}
-    <a href={home} class="ml-1 truncate text-base font-semibold sm:hidden" aria-label={SITE.title}>
-      {SITE.title}
-    </a>
-  </div>
-
-  <div class="chirpy-topbar__search">
-    <SearchButton locale={locale} />
-    {SITE.multilingual && <LanguageSwitcher locale={locale} availableLocales={availableLocales} />}
+      <SearchButton />
+      <ThemeToggle />
+    </div>
   </div>
 </header>

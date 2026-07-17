@@ -1,12 +1,14 @@
 // @ts-check
 import { unified } from '@astrojs/markdown-remark';
 import mdx from '@astrojs/mdx';
+import react from '@astrojs/react';
 import sitemap from '@astrojs/sitemap';
 import tailwindcss from '@tailwindcss/vite';
 import expressiveCode from 'astro-expressive-code';
 import icon from 'astro-icon';
+import keystatic from '@keystatic/astro';
 import { defineConfig, fontProviders, svgoOptimizer } from 'astro/config';
-import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
@@ -18,6 +20,7 @@ import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import { remarkAlert } from './src/plugins/remark-alert.ts';
 import { remarkAsHtml } from './src/plugins/remark-ashtml.ts';
+import { rehypeTableWrapper } from './src/plugins/rehype-table-wrapper.ts';
 
 import { SITE } from './src/config';
 
@@ -26,15 +29,101 @@ const BASE = rawBase.startsWith('/') ? rawBase : `/${rawBase}`;
 const SITEMAP_XSL_HREF = `${BASE}/sitemap/styles.xsl`;
 const SKIP_RSS_SITEMAP = process.env.CI_SKIP_RSS_SITEMAP === 'true';
 
+const fontsourceUnicodeRanges = JSON.parse(
+  readFileSync(join(process.cwd(), 'node_modules/@fontsource/source-sans-3/unicode.json'), 'utf8'),
+);
+/**
+ * @param {'latin' | 'cyrillic'} subset
+ * @returns {[string, ...string[]]}
+ */
+const fontUnicodeRange = (subset) => [fontsourceUnicodeRanges[subset]];
+
 /**
  * Set of URL path segments that belong to unlisted posts/pages.
  * Populated by `collectUnlistedUrls()` integration before the sitemap
  * integration runs, so the sitemap `filter` can exclude them.
  *
- * We use path segments (e.g. "posts/my-slug") rather than full URLs so
+ * We use path segments (e.g. "my-slug") rather than full URLs so
  * the check works regardless of `SITE_URL` or `BASE_PATH` values.
  */
 const unlistedPathSegments = new Set();
+
+const PAGE_ROUTE_FILE_RE = /\.(astro|md|mdx|js|jsx|ts|tsx)$/;
+
+/**
+ * Collect top-level routes that are already owned by files in `src/pages`.
+ * The root catch-all post route itself is ignored because it is the thing
+ * being protected by this validation.
+ *
+ * @param {string} dir
+ * @param {string} rootDir
+ * @param {Map<string, string>} routes
+ */
+function collectTopLevelPageRoutes(dir, rootDir, routes) {
+  for (const name of readdirSync(dir)) {
+    const path = join(dir, name);
+    const stat = statSync(path);
+    if (stat.isDirectory()) {
+      collectTopLevelPageRoutes(path, rootDir, routes);
+      continue;
+    }
+    if (!PAGE_ROUTE_FILE_RE.test(name)) continue;
+
+    const relative = path.slice(rootDir.length + 1).replaceAll('\\', '/');
+    if (relative === '[...slug].astro') continue;
+
+    const segments = relative.split('/');
+    const first = segments[0];
+    const topLevelRoute = first === 'index.astro' ? '' : first.replace(PAGE_ROUTE_FILE_RE, '');
+    if (!topLevelRoute) continue;
+    routes.set(topLevelRoute, relative);
+  }
+}
+
+/**
+ * Validate that root-level post URLs won't shadow concrete site pages.
+ * Example: `src/content/posts/about.md` would want `/about/`, but that URL
+ * already belongs to `src/pages/about.astro`.
+ */
+function validatePostRouteConflicts() {
+  return {
+    name: 'chirpy:validate-post-route-conflicts',
+    hooks: {
+      'astro:build:start': async () => {
+        try {
+          const routes = new Map();
+          const pagesDir = join(process.cwd(), 'src/pages');
+          collectTopLevelPageRoutes(pagesDir, pagesDir, routes);
+
+          const { getCollection } = await import('astro:content');
+          const entries = await getCollection('posts');
+          const conflicts = [];
+
+          for (const entry of entries) {
+            const slug = entry.id.replace(/\.(md|mdx)$/i, '');
+            const firstSegment = slug.split('/')[0];
+            const routeFile = routes.get(firstSegment);
+            if (!routeFile) continue;
+            conflicts.push(
+              `- src/content/posts/${entry.id} -> /${slug}/ conflicts with src/pages/${routeFile}`,
+            );
+          }
+
+          if (conflicts.length > 0) {
+            throw new Error(
+              `Post slug conflicts with existing page routes:\n${conflicts.join('\n')}`,
+            );
+          }
+        } catch (error) {
+          if (error instanceof Error && error.message.startsWith('Post slug conflicts'))
+            throw error;
+          // Content collections aren't available in all build contexts
+          // (e.g. CI fast mode). Silently skip validation in that case.
+        }
+      },
+    },
+  };
+}
 
 /**
  * Integration that reads the content collection at build time and
@@ -54,15 +143,8 @@ function collectUnlistedUrls() {
           const entries = await getCollection('posts');
           for (const entry of entries) {
             if (!entry.data.unlisted) continue;
-            // Derive locale and slug from the entry id (e.g. "en/my-post.md").
-            const segs = entry.id.split(/[\\/]/);
-            const locale = segs[0] && /** @type {readonly string[]} */ (SITE.locales).includes(segs[0]) ? segs[0] : SITE.defaultLocale;
-            const slug = segs.slice(1).join('/').replace(/\.(md|mdx)$/i, '');
-            if (locale === SITE.defaultLocale) {
-              unlistedPathSegments.add(`posts/${slug}`);
-            } else {
-              unlistedPathSegments.add(`${locale}/posts/${slug}`);
-            }
+            const slug = entry.id.replace(/\.(md|mdx)$/i, '');
+            unlistedPathSegments.add(slug);
           }
         } catch {
           // Content collections aren't available in all build contexts
@@ -157,19 +239,6 @@ export default defineConfig({
     ],
   },
 
-  // i18n config: EN is default and serves at root (no prefix), FR served at /fr.
-  // We rely on filesystem routing (src/pages and src/pages/[...locale]) for the actual
-  // routes, but still expose locales here so integrations like sitemap can
-  // generate hreflang alternates correctly.
-  i18n: {
-    locales: [...SITE.locales],
-    defaultLocale: SITE.defaultLocale,
-    routing: {
-      prefixDefaultLocale: false,
-      redirectToDefaultLocale: false,
-    },
-  },
-
   markdown: {
     // `remark-math` parses `$inline$` and `$$display$$` blocks into MDAST
     // math nodes; `rehype-katex` converts them to pre-rendered HTML at
@@ -183,6 +252,7 @@ export default defineConfig({
       remarkPlugins: [remarkAlert, remarkAsHtml, remarkGfm, remarkMath],
       rehypePlugins: [
         rehypeKatex,
+        rehypeTableWrapper,
         rehypeSlug,
         [
           rehypeAutolinkHeadings,
@@ -208,6 +278,9 @@ export default defineConfig({
   },
 
   integrations: [
+    react(),
+    ...(process.env.SKIP_KEYSTATIC === 'true' ? [] : [keystatic()]),
+    validatePostRouteConflicts(),
     icon({
       // Astro-Icon will tree-shake from @iconify-json/lucide so only the
       // icons actually referenced make it into the build.
@@ -218,7 +291,7 @@ export default defineConfig({
     // markers, diffs, word wrap, collapsible sections.
     // https://expressive-code.com/
     expressiveCode({
-      themes: ['github-light', 'github-dark-dimmed'],
+      themes: ['one-light', 'one-dark-pro'],
       // Bind the active theme to our `<html data-theme>` attribute instead
       // of the default `prefers-color-scheme` media query so the theme
       // toggle in the sidebar takes effect immediately.
@@ -248,10 +321,6 @@ export default defineConfig({
       : [
           collectUnlistedUrls(),
           sitemap({
-            i18n: {
-              defaultLocale: SITE.defaultLocale,
-              locales: Object.fromEntries(SITE.locales.map((l) => [l, l])),
-            },
             // Browsers (and only browsers) apply this XSL to render a
             // human-readable view of `sitemap-index.xml` and `sitemap-0.xml`.
             // Search-engine crawlers ignore the processing instruction.
@@ -274,6 +343,14 @@ export default defineConfig({
 
   vite: {
     plugins: [tailwindcss()],
+    server: {
+      watch: {
+        // Keystatic removes an asset before it saves the updated Markdown
+        // without that reference. Ignore this transient state; the Markdown
+        // save still triggers Astro's content refresh once it is consistent.
+        ignored: ['**/src/assets/images/posts/**'],
+      },
+    },
   },
 
   experimental: {
@@ -297,6 +374,7 @@ export default defineConfig({
           {
             weight: '400',
             style: 'normal',
+            unicodeRange: fontUnicodeRange('latin'),
             src: [
               './node_modules/@fontsource/source-sans-3/files/source-sans-3-latin-400-normal.woff2',
             ],
@@ -304,6 +382,7 @@ export default defineConfig({
           {
             weight: '600',
             style: 'normal',
+            unicodeRange: fontUnicodeRange('latin'),
             src: [
               './node_modules/@fontsource/source-sans-3/files/source-sans-3-latin-600-normal.woff2',
             ],
@@ -311,6 +390,7 @@ export default defineConfig({
           {
             weight: '700',
             style: 'normal',
+            unicodeRange: fontUnicodeRange('latin'),
             src: [
               './node_modules/@fontsource/source-sans-3/files/source-sans-3-latin-700-normal.woff2',
             ],
@@ -318,8 +398,41 @@ export default defineConfig({
           {
             weight: '900',
             style: 'normal',
+            unicodeRange: fontUnicodeRange('latin'),
             src: [
               './node_modules/@fontsource/source-sans-3/files/source-sans-3-latin-900-normal.woff2',
+            ],
+          },
+          {
+            weight: '400',
+            style: 'normal',
+            unicodeRange: fontUnicodeRange('cyrillic'),
+            src: [
+              './node_modules/@fontsource/source-sans-3/files/source-sans-3-cyrillic-400-normal.woff2',
+            ],
+          },
+          {
+            weight: '600',
+            style: 'normal',
+            unicodeRange: fontUnicodeRange('cyrillic'),
+            src: [
+              './node_modules/@fontsource/source-sans-3/files/source-sans-3-cyrillic-600-normal.woff2',
+            ],
+          },
+          {
+            weight: '700',
+            style: 'normal',
+            unicodeRange: fontUnicodeRange('cyrillic'),
+            src: [
+              './node_modules/@fontsource/source-sans-3/files/source-sans-3-cyrillic-700-normal.woff2',
+            ],
+          },
+          {
+            weight: '900',
+            style: 'normal',
+            unicodeRange: fontUnicodeRange('cyrillic'),
+            src: [
+              './node_modules/@fontsource/source-sans-3/files/source-sans-3-cyrillic-900-normal.woff2',
             ],
           },
         ],
@@ -355,6 +468,7 @@ export default defineConfig({
           {
             weight: '400',
             style: 'normal',
+            unicodeRange: fontUnicodeRange('latin'),
             src: [
               './node_modules/@fontsource/jetbrains-mono/files/jetbrains-mono-latin-400-normal.woff2',
             ],
@@ -362,8 +476,25 @@ export default defineConfig({
           {
             weight: '600',
             style: 'normal',
+            unicodeRange: fontUnicodeRange('latin'),
             src: [
               './node_modules/@fontsource/jetbrains-mono/files/jetbrains-mono-latin-600-normal.woff2',
+            ],
+          },
+          {
+            weight: '400',
+            style: 'normal',
+            unicodeRange: fontUnicodeRange('cyrillic'),
+            src: [
+              './node_modules/@fontsource/jetbrains-mono/files/jetbrains-mono-cyrillic-400-normal.woff2',
+            ],
+          },
+          {
+            weight: '600',
+            style: 'normal',
+            unicodeRange: fontUnicodeRange('cyrillic'),
+            src: [
+              './node_modules/@fontsource/jetbrains-mono/files/jetbrains-mono-cyrillic-600-normal.woff2',
             ],
           },
         ],

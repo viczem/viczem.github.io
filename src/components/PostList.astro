@@ -1,16 +1,14 @@
 ---
-import type { Locale } from '../config';
 import { useTranslations } from '../i18n/utils';
 import type { Post } from '../utils/posts';
 import PostCard from './PostCard.astro';
 
 interface Props {
   posts: Post[];
-  locale: Locale;
 }
 
-const { posts, locale } = Astro.props;
-const t = useTranslations(locale);
+const { posts } = Astro.props;
+const t = useTranslations();
 ---
 
 {
@@ -21,7 +19,7 @@ const t = useTranslations(locale);
   ) : (
     <div id="post-list">
       {posts.map((post, index) => (
-        <PostCard post={post} locale={locale} prioritizeLcp={index === 0} />
+        <PostCard post={post} prioritizeLcp={index === 0} />
       ))}
     </div>
   )

@@ -4,7 +4,7 @@
  *
  * Produces a 1200×630 PNG matching the Chirpy Astro theme style:
  * - Indigo-blue gradient background (primary color)
- * - White card with title, description, category, date, and site branding
+ * - White card with title, description, date, tags, and site branding
  * - Clean typography with good contrast
  */
 
@@ -18,7 +18,6 @@ export interface OgImageData {
   title: string;
   description?: string;
   date?: string;
-  category?: string;
   tags?: string[];
 }
 
@@ -27,8 +26,10 @@ const HEIGHT = 630;
 
 // Load font files from @fontsource/inter (bundled locally, no network needed).
 const fontsDir = join(process.cwd(), 'node_modules/@fontsource/inter/files');
-const fontRegular = readFileSync(join(fontsDir, 'inter-latin-400-normal.woff'));
-const fontBold = readFileSync(join(fontsDir, 'inter-latin-700-normal.woff'));
+const fontRegularLatin = readFileSync(join(fontsDir, 'inter-latin-400-normal.woff'));
+const fontRegularCyrillic = readFileSync(join(fontsDir, 'inter-cyrillic-400-normal.woff'));
+const fontBoldLatin = readFileSync(join(fontsDir, 'inter-latin-700-normal.woff'));
+const fontBoldCyrillic = readFileSync(join(fontsDir, 'inter-cyrillic-700-normal.woff'));
 
 /**
  * Generate a themed OG image as a PNG buffer.
@@ -100,45 +101,27 @@ export async function generateOgImage(data: OgImageData): Promise<Buffer> {
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4)',
           },
           children: [
-            // === TOP ROW: category + date ===
+            // === TOP ROW: date ===
             {
               type: 'div',
               props: {
                 style: {
                   display: 'flex',
-                  justifyContent: 'space-between',
+                  justifyContent: 'flex-end',
                   alignItems: 'center',
                   width: '100%',
                 },
-                children: [
-                  {
-                    type: 'div',
-                    props: {
-                      style: {
-                        display: 'flex',
-                        backgroundColor: data.category ? '#eef2ff' : 'transparent',
-                        color: '#2a408e',
-                        fontSize: '18px',
-                        fontWeight: 700,
-                        padding: data.category ? '8px 20px' : '0',
-                        borderRadius: '24px',
-                        border: data.category ? '1.5px solid #c7d2fe' : 'none',
-                      },
-                      children: data.category ?? '',
+                children: {
+                  type: 'div',
+                  props: {
+                    style: {
+                      display: 'flex',
+                      color: '#6b7280',
+                      fontSize: '18px',
                     },
+                    children: data.date ?? '',
                   },
-                  {
-                    type: 'div',
-                    props: {
-                      style: {
-                        display: 'flex',
-                        color: '#6b7280',
-                        fontSize: '18px',
-                      },
-                      children: data.date ?? '',
-                    },
-                  },
-                ],
+                },
               },
             },
             // === MIDDLE: title + description ===
@@ -257,8 +240,10 @@ export async function generateOgImage(data: OgImageData): Promise<Buffer> {
     width: WIDTH,
     height: HEIGHT,
     fonts: [
-      { name: 'Inter', data: fontRegular, weight: 400, style: 'normal' },
-      { name: 'Inter', data: fontBold, weight: 700, style: 'normal' },
+      { name: 'Inter', data: fontRegularLatin, weight: 400, style: 'normal' },
+      { name: 'Inter', data: fontRegularCyrillic, weight: 400, style: 'normal' },
+      { name: 'Inter', data: fontBoldLatin, weight: 700, style: 'normal' },
+      { name: 'Inter', data: fontBoldCyrillic, weight: 700, style: 'normal' },
     ],
   });
 

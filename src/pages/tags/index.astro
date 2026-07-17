@@ -1,0 +1,30 @@
+---
+import BaseLayout from '~/layouts/BaseLayout.astro';
+import { useTranslations } from '~/i18n/utils';
+import { getTagsWithCount, tagPath } from '~/utils/posts';
+
+const t = useTranslations();
+const tags = await getTagsWithCount();
+---
+
+<BaseLayout title={t('tags.title')} crumbs={[{ label: t('tags.title') }]}>
+  <header class="mb-6">
+    <h1 class="text-3xl font-bold tracking-tight">{t('tags.title')}</h1>
+  </header>
+  {
+    tags.length === 0 ? (
+      <p class="text-base-content/70">{t('tags.empty')}</p>
+    ) : (
+        <ul class="flex flex-wrap gap-2">
+          {tags.map((tag) => (
+            <li>
+              <a href={tagPath(tag.name)} class="post-tag gap-1.5 text-xs">
+                {tag.name}
+                <span class="opacity-70">{tag.count}</span>
+              </a>
+            </li>
+        ))}
+      </ul>
+    )
+  }
+</BaseLayout>

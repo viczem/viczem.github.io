@@ -1,41 +1,39 @@
 ---
 /**
  * Chirpy-style fixed left sidebar: avatar + site title + tagline,
- * uppercase vertical nav with icon bullets, theme toggle + social
- * pinned to the bottom.
+ * uppercase vertical nav with icon bullets and socials pinned to the bottom.
  */
 
-import { SITE, NAV, SOCIALS, type Locale } from '../config';
+import { SITE, NAV, SOCIALS } from '../config';
 import { useTranslations, localizedPath, withBase } from '../i18n/utils';
 import type { UIKey } from '../i18n/ui';
 import { Icon } from 'astro-icon/components';
 import { Image } from 'astro:assets';
-import ThemeToggle from './islands/ThemeToggle.astro';
+import type { ImageMetadata } from 'astro';
 
-interface Props {
-  locale: Locale;
-}
-
-const { locale } = Astro.props;
-const t = useTranslations(locale);
-const home = localizedPath('/', locale);
+const t = useTranslations();
+const home = localizedPath('/');
 const avatar = SITE.author.avatar;
 const isStringAvatar = typeof avatar === 'string';
+const isThemeAvatar = (
+  value: typeof avatar,
+): value is { light: ImageMetadata; dark: ImageMetadata } =>
+  typeof value === 'object' && value !== null && 'light' in value && 'dark' in value;
 const avatarSrc = isStringAvatar ? avatar.trim() : '';
 
 const navItems = NAV.map((item) => ({
   ...item,
-  href: localizedPath(item.href, locale),
+  href: localizedPath(item.href),
   label: t(`nav.${item.key}` as UIKey),
 }));
 ---
 
 <aside id="sidebar" class="chirpy-sidebar" aria-label="Sidebar">
   {/* Profile */}
-  <header class="flex w-full flex-col items-center pt-4 pb-6 text-center">
-    <a href={home} class="flex flex-col items-center" aria-label={SITE.title}>
+  <header class="flex w-full flex-col items-start pb-6 pl-3">
+    <a href={home} class="flex flex-col items-start" aria-label={SITE.title}>
       <span
-        class="border-base-100 block h-28 w-28 overflow-hidden rounded-full border-4 shadow-sm transition hover:scale-[1.02]"
+        class="block h-28 w-28 overflow-hidden rounded-full shadow-sm transition hover:scale-[1.02]"
         style="background:linear-gradient(135deg, var(--color-primary), color-mix(in oklab, var(--color-primary) 70%, white));"
       >
         {
@@ -50,6 +48,27 @@ const navItems = NAV.map((item) => ({
                 loading="eager"
                 decoding="async"
               />
+            ) : isThemeAvatar(avatar) ? (
+              <>
+                <Image
+                  src={avatar.light}
+                  alt={SITE.author.name}
+                  width={112}
+                  height={112}
+                  class="avatar-light h-full w-full object-cover"
+                  loading="eager"
+                  decoding="async"
+                />
+                <Image
+                  src={avatar.dark}
+                  alt=""
+                  width={112}
+                  height={112}
+                  class="avatar-dark h-full w-full object-cover"
+                  loading="eager"
+                  decoding="async"
+                />
+              </>
             ) : (
               <Image
                 src={avatar}
@@ -63,13 +82,13 @@ const navItems = NAV.map((item) => ({
             )
           ) : (
             <span class="text-primary-content flex h-full w-full items-center justify-center text-3xl font-bold">
-              {SITE.title.charAt(0)}
+              {SITE.author.name}
             </span>
           )
         }
       </span>
       <span class="text-base-content hover:text-primary mt-4 text-xl font-semibold tracking-wide">
-        {SITE.title}
+        {SITE.name}
       </span>
     </a>
     {
@@ -106,11 +125,8 @@ const navItems = NAV.map((item) => ({
     </ul>
   </nav>
 
-  {/* Bottom row: theme toggle + socials */}
-  <div
-    class="border-base-300 mt-4 flex w-full flex-wrap items-center justify-center gap-2 border-t pt-4"
-  >
-    <ThemeToggle locale={locale} />
+  {/* Bottom row: socials */}
+  <div class="mt-4 flex w-full flex-wrap items-start justify-start gap-2 pt-4">
     {
       SOCIALS.map((s) => (
         <a
@@ -120,12 +136,26 @@ const navItems = NAV.map((item) => ({
           aria-label={s.label}
           target={s.href.startsWith('http') || s.label === 'RSS' ? '_blank' : undefined}
         >
-          <Icon name={s.icon} width={16} height={16} />
+          <Icon name={s.icon} size={16} width={16} height={16} />
         </a>
       ))
     }
   </div>
 </aside>
+
+<style>
+  .avatar-dark {
+    display: none;
+  }
+
+  :global(html[data-theme='chirpy-dark']) .avatar-light {
+    display: none;
+  }
+
+  :global(html[data-theme='chirpy-dark']) .avatar-dark {
+    display: block;
+  }
+</style>
 
 {/* Mobile backdrop */}
 <button

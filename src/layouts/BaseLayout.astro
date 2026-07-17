@@ -9,17 +9,21 @@ import Panel from '../components/Panel.astro';
 import SEO from '../components/SEO.astro';
 import BackToTop from '../components/islands/BackToTop.astro';
 import { ClientRouter } from 'astro:transitions';
-import faviconImg from '../assets/images/site/favicon.svg';
-import { SITE, type Locale } from '../config';
-import { detectLocale, htmlLang, useTranslations, stripLocale, withBase } from '../i18n/utils';
+import faviconImg from '../assets/images/site/favicon.png';
+import favicon64Img from '../assets/images/site/favicon64.png';
+import favicon120Img from '../assets/images/site/favicon120.png';
+import favicon152Img from '../assets/images/site/favicon152.png';
+import favicon167Img from '../assets/images/site/favicon167.png';
+import favicon180Img from '../assets/images/site/favicon180.png';
+import favicon240Img from '../assets/images/site/favicon240.png';
+import { htmlLang, useTranslations, withBase } from '../i18n/utils';
 import { buildSeo, type SeoMeta } from '../utils/seo';
+import { SITE } from '../config';
 
 interface Props {
   title?: string;
   description?: string;
   ogImage?: string;
-  /** Logical path WITHOUT locale prefix (used for hreflang). */
-  pathWithoutLocale?: string;
   type?: 'website' | 'article';
   publishedTime?: Date;
   modifiedTime?: Date;
@@ -32,12 +36,6 @@ interface Props {
   crumbs?: Array<{ label: string; href?: string }>;
   /** Pre-built SEO meta override. */
   seo?: SeoMeta;
-  /**
-   * Locales for which a translation of the current page actually
-   * exists. Used to limit the language switcher to working links and
-   * to scope hreflang alternates. Defaults to all `SITE.locales`.
-   */
-  availableLocales?: readonly Locale[];
 }
 
 const {
@@ -52,29 +50,52 @@ const {
   narrow = false,
   crumbs = [],
   seo,
-  availableLocales,
 } = Astro.props;
 
-const locale: Locale = detectLocale(Astro.url.pathname);
-const t = useTranslations(locale);
-const lang = htmlLang(locale);
+const t = useTranslations();
+const lang = htmlLang();
 
-const pathWithoutLocale = Astro.props.pathWithoutLocale ?? stripLocale(Astro.url.pathname);
 const meta: SeoMeta =
   seo ??
   buildSeo({
     title,
     description,
-    pathWithoutLocale,
     fullPath: Astro.url.pathname,
-    locale,
     ogImage,
     type,
     publishedTime,
     modifiedTime,
     tags,
-    availableLocales,
   });
+
+const breadcrumbItems =
+  crumbs.length > 0
+    ? [
+        { label: t('nav.home'), href: new URL(withBase('/'), SITE.url).toString() },
+        ...crumbs.map((crumb) => ({
+          label: crumb.label,
+          href: crumb.href ? new URL(withBase(crumb.href), SITE.url).toString() : meta.canonical,
+        })),
+      ]
+    : [];
+
+const breadcrumbJsonLd =
+  breadcrumbItems.length > 0
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: breadcrumbItems.map((item, index) => ({
+          '@type': 'ListItem',
+          position: index + 1,
+          name: item.label,
+          item: item.href,
+        })),
+      }
+    : undefined;
+
+const contentGridClass = hidePanel
+  ? 'grid-cols-1'
+  : 'grid-cols-1 xl:grid-cols-[minmax(0,1fr)_var(--width-panel)] min-[1440px]:grid-cols-[minmax(0,1fr)_15rem] min-[1650px]:grid-cols-[minmax(0,1fr)_16.25rem]';
 ---
 
 <!doctype html>
@@ -85,35 +106,51 @@ const meta: SeoMeta =
     <meta name="generator" content={Astro.generator} />
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f6f7f8" />
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1b1b1e" />
-    <link rel="icon" type="image/svg+xml" href={withBase(faviconImg.src)} />
-    <link
-      rel="alternate"
-      type="application/rss+xml"
-      title={`${SITE.title} (EN)`}
-      href={withBase('/rss.xml')}
-    />
-    <link
-      rel="alternate"
-      type="application/rss+xml"
-      title={`${SITE.title} (FR)`}
-      href={withBase('/fr/rss.xml')}
-    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content={SITE.name} />
+    <link rel="manifest" href={withBase('/manifest.json')} />
+    <link rel="icon" type="image/png" href={withBase(faviconImg.src)} />
+    <link rel="icon" type="image/png" sizes="64x64" href={withBase(favicon64Img.src)} />
+    <link rel="icon" type="image/png" sizes="120x120" href={withBase(favicon120Img.src)} />
+    <link rel="icon" type="image/png" sizes="180x180" href={withBase(favicon180Img.src)} />
+    <link rel="icon" type="image/png" sizes="240x240" href={withBase(favicon240Img.src)} />
+    <link rel="apple-touch-icon" sizes="120x120" href={withBase(favicon120Img.src)} />
+    <link rel="apple-touch-icon" sizes="152x152" href={withBase(favicon152Img.src)} />
+    <link rel="apple-touch-icon" sizes="167x167" href={withBase(favicon167Img.src)} />
+    <link rel="apple-touch-icon" sizes="180x180" href={withBase(favicon180Img.src)} />
     <SEO meta={meta} />
+    {
+      breadcrumbJsonLd && (
+        <script is:inline type="application/ld+json" set:html={JSON.stringify(breadcrumbJsonLd)} />
+      )
+    }
     {/* Custom fonts configured via Astro Fonts API */}
     <Font cssVariable="--font-source-sans-3" />
     <Font cssVariable="--font-lato" />
     <Font cssVariable="--font-jetbrains-mono" preload />
     <ClientRouter />
-    {/* Apply persisted theme as early as possible to avoid FOUC. */}
+    {/* Apply system theme or session cookie override as early as possible to avoid FOUC. */}
     <script is:inline>
       (function () {
+        var cookieName = 'theme';
+
+        function systemTheme() {
+          return window.matchMedia('(prefers-color-scheme: dark)').matches
+            ? 'chirpy-dark'
+            : 'chirpy-light';
+        }
+
+        function getThemeCookie() {
+          var match = document.cookie.match(new RegExp('(?:^|; )' + cookieName + '=([^;]*)'));
+          if (!match) return '';
+          var value = decodeURIComponent(match[1]);
+          return value === 'chirpy-dark' || value === 'chirpy-light' ? value : '';
+        }
+
         function applyTheme() {
           try {
-            var stored = localStorage.getItem('theme');
-            var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            var valid = stored === 'chirpy-dark' || stored === 'chirpy-light';
-            var theme = valid ? stored : prefersDark ? 'chirpy-dark' : 'chirpy-light';
-            if (!valid && stored) localStorage.setItem('theme', theme);
+            localStorage.removeItem(cookieName);
+            var theme = getThemeCookie() || systemTheme();
             document.documentElement.setAttribute('data-theme', theme);
           } catch {
             /* ignore */
@@ -134,34 +171,37 @@ const meta: SeoMeta =
       {t('site.skipToContent')}
     </a>
 
-    <Sidebar locale={locale} />
+    <Sidebar />
 
-    <div class="chirpy-main-wrapper">
-      <div class="chirpy-shell">
-        <Topbar locale={locale} crumbs={crumbs} availableLocales={availableLocales} />
+    <div class="min-h-screen min-[1650px]:!ml-(--width-sidebar-lg) lg:ml-(--width-sidebar)">
+      <Topbar crumbs={crumbs} />
 
-        <div class="flex flex-1 gap-10">
-          <div class="flex min-w-0 flex-1 flex-col">
-            <main
-              id="main"
-              aria-label="Main Content"
-              class:list={['min-w-0 flex-1 py-6 lg:pr-2', narrow ? 'mx-auto w-full max-w-3xl' : '']}
-            >
-              <slot />
-            </main>
+      <div
+        class:list={[
+          'container mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 lg:px-8',
+          contentGridClass,
+        ]}
+      >
+        <div class="flex min-w-0 flex-col">
+          <main
+            id="main"
+            aria-label="Main Content"
+            class:list={['min-w-0 flex-1 py-6 lg:pr-2', narrow ? 'mx-auto w-full max-w-3xl' : '']}
+          >
+            <slot />
+          </main>
 
-            <Footer locale={locale} />
-          </div>
-
-          {
-            !hidePanel && (
-              <aside class="chirpy-panel-rail" aria-label="Sidebar widgets">
-                <Panel locale={locale} />
-                <slot name="aside-bottom" />
-              </aside>
-            )
-          }
+          <Footer />
         </div>
+
+        {
+          !hidePanel && (
+            <aside class="hidden pt-6 text-sm xl:block [&>*+*]:mt-8" aria-label="Sidebar widgets">
+              <Panel />
+              <slot name="aside-bottom" />
+            </aside>
+          )
+        }
       </div>
     </div>
 

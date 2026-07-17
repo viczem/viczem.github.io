@@ -1,0 +1,123 @@
+---
+import { TELEGRAM_COMMENTS } from '../../config';
+import { useTranslations } from '../../i18n/utils';
+
+interface Props {
+  postId: number;
+}
+
+const { postId } = Astro.props;
+const t = useTranslations();
+const discussion = `${TELEGRAM_COMMENTS.channel}/${postId}`;
+const telegramUrl = `https://t.me/${discussion}`;
+---
+
+<section class="border-base-300 mt-12 border-t pt-8" aria-labelledby="comments-heading">
+  <div
+    data-telegram-comments
+    data-discussion={discussion}
+    data-comments-limit={TELEGRAM_COMMENTS.commentsLimit}
+    data-fallback-url={telegramUrl}
+  >
+  </div>
+
+  <div data-telegram-comments-fallback hidden>
+    <h2 id="comments-heading" class="mb-2 text-xl font-semibold">{t('post.comments')}</h2>
+    <a href={telegramUrl} target="_blank" rel="noopener noreferrer" class="btn btn-primary mt-2">
+      Перейти к обсуждению в Telegram
+    </a>
+  </div>
+</section>
+
+<script>
+  const TELEGRAM_FALLBACK_COOKIE = 'telegram_comments_fallback';
+  const TELEGRAM_WIDGET_TIMEOUT = 15000;
+
+  function telegramColorScheme() {
+    return document.documentElement.getAttribute('data-theme') === 'chirpy-dark' ? 'dark' : 'light';
+  }
+
+  function hasTelegramFallbackCookie() {
+    return document.cookie.split('; ').some((cookie) => cookie === `${TELEGRAM_FALLBACK_COOKIE}=1`);
+  }
+
+  function setTelegramFallbackCookie() {
+    document.cookie = `${TELEGRAM_FALLBACK_COOKIE}=1; Path=/; SameSite=Lax`;
+  }
+
+  function telegramFallbackElement(mount: HTMLElement) {
+    return mount.parentElement?.querySelector<HTMLElement>('[data-telegram-comments-fallback]');
+  }
+
+  function showTelegramFallback(mount: HTMLElement, remember = true) {
+    if (remember) setTelegramFallbackCookie();
+    mount.replaceChildren();
+    delete mount.dataset.mountedColorScheme;
+
+    const fallback = telegramFallbackElement(mount);
+    if (fallback) fallback.hidden = false;
+  }
+
+  function hideTelegramFallback(mount: HTMLElement) {
+    const fallback = telegramFallbackElement(mount);
+    if (fallback) fallback.hidden = true;
+  }
+
+  function hasTelegramIframe(mount: HTMLElement) {
+    return Boolean(
+      mount.querySelector('iframe') ??
+      mount.parentElement?.querySelector('iframe[id^="telegram-discussion-"]'),
+    );
+  }
+
+  function mountTelegramComments() {
+    const mount = document.querySelector<HTMLElement>('[data-telegram-comments]');
+    if (!mount) return;
+
+    if (hasTelegramFallbackCookie()) {
+      showTelegramFallback(mount, false);
+      return;
+    }
+
+    const colorScheme = telegramColorScheme();
+    if (mount.dataset.mountedColorScheme === colorScheme) return;
+
+    mount.dataset.mountedColorScheme = colorScheme;
+    mount.replaceChildren();
+    hideTelegramFallback(mount);
+
+    const script = document.createElement('script');
+    script.src = 'https://telegram.org/js/telegram-widget.js?22';
+    script.async = true;
+    script.setAttribute('data-telegram-discussion', mount.dataset.discussion ?? '');
+    script.setAttribute('data-comments-limit', mount.dataset.commentsLimit ?? '5');
+    if (colorScheme === 'dark') {
+      script.setAttribute('data-dark', '1');
+    }
+
+    const timeout = window.setTimeout(() => {
+      observer.disconnect();
+      if (!hasTelegramIframe(mount)) showTelegramFallback(mount);
+    }, TELEGRAM_WIDGET_TIMEOUT);
+
+    const observer = new MutationObserver(() => {
+      if (!hasTelegramIframe(mount)) return;
+      window.clearTimeout(timeout);
+      observer.disconnect();
+    });
+
+    script.addEventListener('error', () => {
+      window.clearTimeout(timeout);
+      observer.disconnect();
+      showTelegramFallback(mount);
+    });
+
+    observer.observe(mount, { childList: true, subtree: true });
+
+    mount.appendChild(script);
+  }
+
+  mountTelegramComments();
+  document.addEventListener('theme-change', mountTelegramComments);
+  document.addEventListener('astro:page-load', mountTelegramComments);
+</script>

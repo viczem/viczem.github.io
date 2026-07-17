@@ -6,16 +6,12 @@ describe('slugify', () => {
     expect(slugify('JavaScript')).toBe('javascript');
   });
 
-  test('Japanese tags work', () => {
-    expect(slugify('テスト')).toBe('テスト');
+  test('Cyrillic tags are transliterated to latin', () => {
+    expect(slugify('Руководство')).toBe('rukovodstvo');
   });
 
-  test('Malayalam tags work', () => {
-    expect(slugify('മലയാളം')).toBe('മലയാളം');
-  });
-
-  test('Mixed strings work', () => {
-    expect(slugify('日本語 テスト')).toBe('日本語-テスト');
+  test('Cyrillic spaces become hyphens', () => {
+    expect(slugify('начало работы')).toBe('nachalo-raboty');
   });
 
   test('Multiple spaces become single hyphen', () => {
@@ -26,16 +22,20 @@ describe('slugify', () => {
     expect(slugify('hello@world!')).toBe('helloworld');
   });
 
-  test('Leading and trailing hyphens are trimmed', () => {
+  test('Leading and trailing spaces are trimmed', () => {
     expect(slugify('  hello  ')).toBe('hello');
   });
 
-  test('Mixed Latin and Unicode', () => {
-    expect(slugify('React テスト')).toBe('react-テスト');
+  test('Mixed Latin and Cyrillic use a shared ASCII slug', () => {
+    expect(slugify('React Тест')).toBe('react-test');
   });
 
-  test('Accented characters are preserved', () => {
-    expect(slugify('café')).toBe('café');
+  test('Accented characters are transliterated', () => {
+    expect(slugify('café')).toBe('cafe');
+  });
+
+  test('Unsupported scripts may collapse to empty', () => {
+    expect(slugify('テスト')).toBe('');
   });
 
   test('Empty string after processing returns empty', () => {

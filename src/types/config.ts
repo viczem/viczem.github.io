@@ -1,13 +1,13 @@
-import type { Locale } from '../config';
 import type { ImageMetadata } from 'astro';
 
 export interface SiteConfig {
+  name: string;
   title: string;
   description: string;
   author: {
     name: string;
     url?: string;
-    avatar?: string | ImageMetadata;
+    avatar?: string | ImageMetadata | { light: ImageMetadata; dark: ImageMetadata };
     bio?: string;
   };
   defaultOgImage: string;
@@ -33,15 +33,12 @@ export interface SiteConfig {
     themeUrl: string;
   };
   url: string;
-  locales: readonly Locale[];
-  defaultLocale: Locale;
-  multilingual: boolean;
 }
 
 export interface NavItem {
-  /** Unique key matching i18n.ts entries. */
+  /** Unique key matching the UI dictionary entries. */
   key: string;
-  /** Path WITHOUT leading locale prefix. The renderer adds it. */
+  /** Absolute site path. */
   href: string;
   /** Optional icon name (e.g. "home", "tags"). */
   icon?: string;
@@ -53,27 +50,11 @@ export interface SocialLink {
   icon: string;
 }
 
-export interface GiscusConfig {
+export interface TelegramCommentsConfig {
   /** Master switch. */
   enabled: boolean;
-  /** GitHub repo (e.g. `user/repo`). */
-  repo: string;
-  /** Repo ID (from giscus.app). */
-  repoId: string;
-  /** Discussion category. */
-  category: string;
-  /** Category ID. */
-  categoryId: string;
-  /** Discussion mapping strategy. */
-  mapping: 'pathname' | 'url' | 'title' | 'og:title' | 'specific' | 'number';
-  /** Strict matching. */
-  strict: '0' | '1';
-  /** Enable reactions on the main post. */
-  reactionsEnabled: '0' | '1';
-  /** Emit metadata events. */
-  emitMetadata: '0' | '1';
-  /** Comment input position. */
-  inputPosition: 'top' | 'bottom';
-  /** Lazy load. */
-  loading: 'lazy' | 'eager';
+  /** Public channel username without @. */
+  channel: string;
+  /** Number of visible comments before expansion. */
+  commentsLimit: number;
 }

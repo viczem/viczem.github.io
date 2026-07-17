@@ -1,50 +1,121 @@
 ---
 import { useTranslations } from '../../i18n/utils';
-import type { Locale } from '../../config';
 import { Icon } from 'astro-icon/components';
 
-interface Props {
-  locale: Locale;
-}
-
-const { locale } = Astro.props;
-const t = useTranslations(locale);
+const t = useTranslations();
 ---
 
 <button
   type="button"
-  class="chirpy-social"
+  class="chirpy-theme"
   data-theme-toggle
   aria-label={t('theme.toggle')}
   title={t('theme.toggle')}
 >
   <span data-theme-icon="light" class="hidden">
-    <Icon name="lucide:sun" width={18} height={18} aria-label={t('theme.light')} role="img" />
+    <Icon name="lucide:sun" width={16} height={16} aria-label={t('theme.light')} role="img" />
   </span>
   <span data-theme-icon="dark" class="hidden">
-    <Icon name="lucide:moon" width={18} height={18} aria-label={t('theme.dark')} role="img" />
+    <Icon name="lucide:moon" width={16} height={16} aria-label={t('theme.dark')} role="img" />
   </span>
 </button>
 
 <script>
   type Theme = 'chirpy-light' | 'chirpy-dark';
-  const STORAGE_KEY = 'theme';
+  const COOKIE_NAME = 'theme';
+  const CHANNEL_NAME = 'theme';
+  const VALID_THEMES: Theme[] = ['chirpy-light', 'chirpy-dark'];
 
-  function currentTheme(): Theme {
-    return (document.documentElement.getAttribute('data-theme') as Theme) ?? 'chirpy-light';
+  type ThemeWindow = Window & {
+    __themeChannel?: BroadcastChannel;
+    __themeSystemListenerBound?: boolean;
+  };
+
+  const themeWindow = window as ThemeWindow;
+
+  function systemTheme(): Theme {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches
+      ? 'chirpy-dark'
+      : 'chirpy-light';
   }
 
-  function commitTheme(theme: Theme, save = true): void {
+  function themeCookie(): Theme | undefined {
+    const match = document.cookie.match(new RegExp(`(?:^|; )${COOKIE_NAME}=([^;]*)`));
+    if (!match) return undefined;
+    const value = decodeURIComponent(match[1]) as Theme;
+    return VALID_THEMES.includes(value) ? value : undefined;
+  }
+
+  function setThemeCookie(theme: Theme): void {
+    document.cookie = `${COOKIE_NAME}=${encodeURIComponent(theme)}; Path=/; SameSite=Lax`;
+  }
+
+  function deleteThemeCookie(): void {
+    document.cookie = `${COOKIE_NAME}=; Path=/; Max-Age=0; SameSite=Lax`;
+  }
+
+  function resolvedTheme(): Theme {
+    return themeCookie() ?? systemTheme();
+  }
+
+  function currentTheme(): Theme {
+    const theme = document.documentElement.getAttribute('data-theme') as Theme | null;
+    return theme && VALID_THEMES.includes(theme) ? theme : resolvedTheme();
+  }
+
+  function commitTheme(theme: Theme, broadcast = true): void {
     document.documentElement.setAttribute('data-theme', theme);
-    if (save) {
-      try {
-        localStorage.setItem(STORAGE_KEY, theme);
-      } catch {
-        /* ignore */
+    try {
+      if (theme === systemTheme()) {
+        deleteThemeCookie();
+      } else {
+        setThemeCookie(theme);
       }
+    } catch {
+      /* ignore */
     }
     updateIcons(theme);
     document.dispatchEvent(new CustomEvent('theme-change', { detail: { theme } }));
+    if (broadcast) broadcastThemeChange();
+  }
+
+  function applyResolvedTheme(): void {
+    const theme = resolvedTheme();
+    document.documentElement.setAttribute('data-theme', theme);
+    updateIcons(theme);
+    document.dispatchEvent(new CustomEvent('theme-change', { detail: { theme } }));
+  }
+
+  function broadcastThemeChange(): void {
+    try {
+      themeWindow.__themeChannel?.postMessage({ type: 'theme-change' });
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function initCrossTabSync(): void {
+    if (themeWindow.__themeChannel) return;
+    try {
+      themeWindow.__themeChannel = new BroadcastChannel(CHANNEL_NAME);
+      themeWindow.__themeChannel.addEventListener('message', applyResolvedTheme);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function initSystemThemeSync(): void {
+    if (themeWindow.__themeSystemListenerBound) return;
+    themeWindow.__themeSystemListenerBound = true;
+    const mql = window.matchMedia('(prefers-color-scheme: dark)');
+    mql.addEventListener('change', () => {
+      try {
+        if (themeCookie()) return;
+      } catch {
+        /* ignore */
+      }
+      applyResolvedTheme();
+    });
   }
 
   /**
@@ -93,7 +164,14 @@ const t = useTranslations(locale);
   }
 
   function init(): void {
-    updateIcons(currentTheme());
+    try {
+      localStorage.removeItem(COOKIE_NAME);
+    } catch {
+      /* ignore */
+    }
+
+    applyResolvedTheme();
+
     document.querySelectorAll<HTMLElement>('[data-theme-toggle]').forEach((btn) => {
       btn.addEventListener('click', (event) => {
         const next: Theme = currentTheme() === 'chirpy-dark' ? 'chirpy-light' : 'chirpy-dark';
@@ -105,18 +183,9 @@ const t = useTranslations(locale);
         applyTheme(next, origin);
       });
     });
-    // Sync with system preference if user hasn't pinned a theme yet.
-    const mql = window.matchMedia('(prefers-color-scheme: dark)');
-    mql.addEventListener('change', (e) => {
-      try {
-        if (localStorage.getItem(STORAGE_KEY)) return;
-      } catch {
-        /* ignore */
-      }
-      // Apply visually only — do not persist so the system preference
-      // remains the source of truth until the user explicitly toggles.
-      commitTheme(e.matches ? 'chirpy-dark' : 'chirpy-light', false);
-    });
+
+    initCrossTabSync();
+    initSystemThemeSync();
   }
 
   // `astro:page-load` fires on initial load AND after each client-side

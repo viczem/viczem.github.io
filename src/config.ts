@@ -1,7 +1,8 @@
 import process from 'node:process';
-import avatarImg from './assets/images/site/avatar.svg';
-import ogDefaultImg from './assets/images/site/og-default.svg';
-import type { GiscusConfig, NavItem, SiteConfig, SocialLink } from './types/config';
+import avatarDarkImg from './assets/images/site/avatar-dark.png';
+import avatarLightImg from './assets/images/site/avatar-light.png';
+import ogDefaultImg from './assets/images/site/og-default.png';
+import type { NavItem, SiteConfig, SocialLink, TelegramCommentsConfig } from './types/config';
 
 /**
  * Global site + theme configuration.
@@ -11,12 +12,9 @@ import type { GiscusConfig, NavItem, SiteConfig, SocialLink } from './types/conf
 
 // Export imported site images for use in components
 export const SITE_IMAGES = {
-  avatar: avatarImg,
+  avatar: { light: avatarLightImg, dark: avatarDarkImg },
   ogDefault: ogDefaultImg,
 } as const;
-
-export const locales = ['en', 'fr'] as const;
-export type Locale = (typeof locales)[number];
 
 /**
  * Author + social handles. Filled in from env vars (see `.env.example`)
@@ -30,6 +28,7 @@ const GITHUB_HANDLE = import.meta.env.PUBLIC_GITHUB_HANDLE ?? '';
 const GITHUB_REPO = import.meta.env.PUBLIC_GITHUB_REPO ?? 'chirping-astro';
 const TWITTER_HANDLE = import.meta.env.PUBLIC_TWITTER_HANDLE ?? '';
 const CONTACT_EMAIL = import.meta.env.PUBLIC_CONTACT_EMAIL ?? '';
+const TELEGRAM_CHANNEL = import.meta.env.PUBLIC_TELEGRAM_CHANNEL ?? '';
 const THEME_REPO_URL = 'https://github.com/kannansuresh/chirping-astro';
 
 /**
@@ -49,23 +48,23 @@ export const SITE: SiteConfig = {
   // ✅ SAFE TO EDIT (Content & Presentation)
   // ==========================================
 
+  name: 'cat /dev/viczem',
   /** Default site title used as homepage <title> and meta. */
-  title: 'Chirping Astro',
+  title: 'cat /dev/viczem',
   /** Site tagline / description. */
-  description:
-    'A modern, multilingual Astro v7 theme inspired by Chirpy — built with Tailwind v4, daisyUI, MDX, Pagefind, and Giscus.',
+  description: 'Проекты, код и open source',
   /** Author/handle shown in footer + meta. */
   author: {
-    name: 'Chirping Astro',
+    name: 'Виктор Земцов',
     url: GITHUB_HANDLE ? `https://github.com/${GITHUB_HANDLE}` : undefined,
-    avatar: avatarImg,
-    bio: 'A text-focused Astro v7 theme.',
+    avatar: SITE_IMAGES.avatar,
+    bio: 'Проекты, код и open source',
   },
   /** Default OG image. */
   defaultOgImage: ogDefaultImg.src,
   /** Number of posts per page on listings. */
   postsPerPage: 8,
-  /** Display ISO 8601 date format if true, otherwise locale-aware. */
+  /** Display ISO 8601 date format if true, otherwise use Russian locale formatting. */
   isoDates: false,
   /** Site-wide default for whether posts should display their featured image. */
   showFeaturedImages: true,
@@ -76,7 +75,7 @@ export const SITE: SiteConfig = {
   /** Automatically generate Open Graph images for posts that don't have a `heroImage`. */
   autoOgImage: true,
   /** Show a link to the Privacy Policy page in the footer. */
-  showPrivacyPolicy: true,
+  showPrivacyPolicy: false,
   /** Footer text/link controls. */
   footer: {
     /**
@@ -92,7 +91,7 @@ export const SITE: SiteConfig = {
     /** Whether to show the Privacy Policy link in the footer. */
     showPrivacyPolicy: true,
     /** Whether to show theme credits in the footer right side. Theme <themeName> */
-    showThemeCredits: true,
+    showThemeCredits: false,
     /** Label for the theme repository link in the right footer line. */
     themeName: 'Chirping Astro',
     /** Default upstream theme repository. */
@@ -107,17 +106,10 @@ export const SITE: SiteConfig = {
   // `||` (not `??`) so an explicitly empty `SITE_URL=` in `.env` also
   // falls back to the default. Astro requires `site` to be a valid URL.
   url: process.env.SITE_URL || 'https://chirping-astro.example.com',
-  /** Supported locales. Changing this requires adding/removing locale folders, content, and i18n entries. */
-  locales: locales,
-  /** Default locale. Changing this is a breaking, atomic, multi-file operation. */
-  defaultLocale: 'en',
-  /** Show the language switcher and link to translated pages. */
-  multilingual: true,
 };
 
 export const NAV: readonly NavItem[] = [
   { key: 'home', href: '/', icon: 'lucide:home' },
-  { key: 'categories', href: '/categories', icon: 'lucide:layers' },
   { key: 'tags', href: '/tags', icon: 'lucide:tag' },
   { key: 'archives', href: '/archives', icon: 'lucide:archive' },
   { key: 'about', href: '/about', icon: 'lucide:info' },
@@ -136,40 +128,34 @@ export const SOCIALS: readonly SocialLink[] = [
   GITHUB_HANDLE && {
     label: 'GitHub',
     href: `https://github.com/${GITHUB_HANDLE}`,
-    icon: 'simple-icons:github',
+    icon: 'github-outline',
   },
   TWITTER_HANDLE && {
     label: 'Twitter',
     href: `https://x.com/${TWITTER_HANDLE}`,
     icon: 'simple-icons:x',
   },
+  TELEGRAM_CHANNEL && {
+    label: 'Telegram',
+    href: `https://t.me/${TELEGRAM_CHANNEL}`,
+    icon: 'telegram-outline',
+  },
   CONTACT_EMAIL && {
     label: 'Email',
     href: `mailto:${CONTACT_EMAIL}`,
-    icon: 'lucide:mail',
+    icon: 'envelope-outline',
   },
-  { label: 'RSS', href: '/rss.xml', icon: 'lucide:rss' },
+  { label: 'RSS', href: '/rss.xml', icon: 'rss-outline' },
 ].filter(Boolean) as SocialLink[];
 
 /**
- * Giscus comments. Set `enabled: false` to globally disable. Individual
- * posts may opt out via frontmatter `comments: false`.
- *
- * Generate values at https://giscus.app and either set them here or
- * (recommended) provide them via PUBLIC_GISCUS_* env vars at build time.
+ * Telegram comments. Individual posts opt in via frontmatter `telegramPostId`.
+ * The channel is centralized here so renaming/moving the channel is a one-line change.
  */
-export const GISCUS: GiscusConfig = {
-  enabled: (import.meta.env.PUBLIC_GISCUS_ENABLED ?? 'false') === 'true',
-  repo: import.meta.env.PUBLIC_GISCUS_REPO ?? '',
-  repoId: import.meta.env.PUBLIC_GISCUS_REPO_ID ?? '',
-  category: import.meta.env.PUBLIC_GISCUS_CATEGORY ?? 'Announcements',
-  categoryId: import.meta.env.PUBLIC_GISCUS_CATEGORY_ID ?? '',
-  mapping: 'pathname',
-  strict: '0',
-  reactionsEnabled: '1',
-  emitMetadata: '0',
-  inputPosition: 'bottom',
-  loading: 'lazy',
+export const TELEGRAM_COMMENTS: TelegramCommentsConfig = {
+  enabled: (import.meta.env.PUBLIC_TELEGRAM_COMMENTS_ENABLED ?? 'true') === 'true',
+  channel: import.meta.env.PUBLIC_TELEGRAM_CHANNEL ?? '',
+  commentsLimit: 5,
 };
 
 /**
@@ -179,6 +165,6 @@ export const GISCUS: GiscusConfig = {
 export const PAGEFIND = {
   /** Public path where the Pagefind bundle is served. */
   bundlePath: '/_pagefind/',
-  /** Number of results to render per locale. */
+  /** Number of results to render per page. */
   pageSize: 10,
 } as const;

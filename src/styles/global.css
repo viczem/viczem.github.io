@@ -80,8 +80,8 @@
   --color-base-300: oklch(28% 0.008 264);
   --color-base-content: oklch(86% 0.01 264);
 
-  /* Lighter indigo for dark mode contrast (~ #7895d4) */
-  --color-primary: oklch(72% 0.11 264);
+  /* Brighter indigo-blue keeps interactive elements vivid on dark surfaces. */
+  --color-primary: oklch(76% 0.18 264);
   --color-primary-content: oklch(15% 0.015 264);
 
   --color-secondary: oklch(75% 0.09 200);
@@ -150,6 +150,7 @@
 @layer base {
   html {
     scroll-behavior: smooth;
+    overflow-y: scroll;
     -webkit-text-size-adjust: 100%;
     text-rendering: optimizeLegibility;
   }
@@ -254,98 +255,8 @@
     }
   }
 
-  .chirpy-main-wrapper {
-    @apply flex min-h-screen w-full flex-col px-4 sm:px-6;
-  }
-  @media (min-width: 1024px) {
-    .chirpy-main-wrapper {
-      margin-left: var(--width-sidebar);
-      width: calc(100% - var(--width-sidebar));
-      max-width: calc(100% - var(--width-sidebar));
-      padding-left: 3rem;
-      padding-right: 3rem;
-    }
-  }
-  @media (min-width: 1280px) {
-    .chirpy-main-wrapper {
-      padding-left: 3.5rem;
-      padding-right: 3.5rem;
-    }
-  }
-  @media (min-width: 1650px) {
-    .chirpy-main-wrapper {
-      margin-left: var(--width-sidebar-lg);
-      width: calc(100% - var(--width-sidebar-lg));
-      max-width: calc(100% - var(--width-sidebar-lg));
-    }
-  }
-
-  /* Inner shell that horizontally centers the main content (topbar +
-     post cards + panel + footer) inside the area to the right of the
-     sidebar. Caps at Chirpy's $main-content-max-width: 1250px. */
-  .chirpy-shell {
-    @apply mx-auto flex w-full flex-1 flex-col;
-    max-width: 1250px;
-  }
-
-  /* Top bar — uses min-height (not a fixed height) plus vertical padding
-     so the controls aren't flush against the browser chrome on either
-     mobile or desktop. */
-  .chirpy-topbar {
-    @apply bg-base-200/80 supports-backdrop-filter:bg-base-200/70 sticky top-0 z-30 flex min-h-(--height-topbar) items-center justify-between gap-3 py-2 backdrop-blur sm:py-3;
-  }
-
-  /* Right rail wrapper. Holds the global Panel widget followed by an
-     optional aside-bottom slot (e.g. the post TOC). The rail intentionally
-     does NOT use `self-start` so that, on long pages, it stretches to
-     match `<main>`'s height — giving any sticky child (e.g. the TOC)
-     enough vertical room to remain pinned while the article scrolls. */
-  .chirpy-panel-rail {
-    @apply hidden shrink-0 pt-6 text-sm xl:block;
-    width: var(--width-panel);
-  }
-  @media (min-width: 1440px) {
-    .chirpy-panel-rail {
-      width: 15rem; /* 240px */
-    }
-  }
-  @media (min-width: 1650px) {
-    .chirpy-panel-rail {
-      width: 16.25rem; /* 260px */
-    }
-  }
-  .chirpy-panel-rail > * + * {
-    margin-top: 2rem;
-  }
-  /* Search slot inside the topbar — on xl+ its width matches the right
-     panel rail so the search pill aligns vertically over the panel column.
-     Below xl, the right rail is hidden so the slot shrinks to fit. */
-  .chirpy-topbar__search {
-    @apply flex shrink-0 items-center justify-start gap-2 px-1;
-  }
-  @media (min-width: 1280px) {
-    .chirpy-topbar__search {
-      width: calc(var(--width-panel) + 2.5rem); /* rail width + gap-10 */
-      padding-left: 2.5rem; /* mirror gap-10 between main and rail */
-    }
-  }
-  @media (min-width: 1440px) {
-    .chirpy-topbar__search {
-      width: calc(15rem + 2.5rem);
-    }
-  }
-  @media (min-width: 1650px) {
-    .chirpy-topbar__search {
-      width: calc(16.25rem + 2.5rem);
-    }
-  }
-  /* Search row at the very top of the right panel rail. */
-  .chirpy-panel-rail__search {
-    @apply w-full;
-  }
-
   /* Inner Panel widget (Recently Updated + Trending Tags). Width and
-     visibility are owned by the rail wrapper, so this is content-only. */
+     visibility are owned by BaseLayout's grid, so this is content-only. */
   .chirpy-panel {
     @apply block text-sm;
   }
@@ -446,7 +357,7 @@
     @apply mt-8 mb-4 text-3xl;
   }
   .prose-chirpy h2 {
-    @apply border-base-300 mt-10 mb-4 border-b pb-2 text-2xl;
+    @apply mt-10 mb-4 text-2xl;
   }
   .prose-chirpy h3 {
     @apply mt-8 mb-3 text-xl;
@@ -478,6 +389,9 @@
   .prose-chirpy code:not(pre code) {
     @apply bg-base-200 text-accent rounded px-1.5 py-0.5 font-mono text-[0.92em];
     font-family: var(--font-mono);
+  }
+  [data-theme='chirpy-light'] .prose-chirpy code:not(pre code) {
+    color: oklch(48% 0.13 75);
   }
   .prose-chirpy pre {
     @apply border-base-300 relative my-6 overflow-x-auto rounded-md border p-4 text-sm leading-relaxed;
@@ -536,14 +450,17 @@
     height: auto;
     object-fit: cover;
   }
-  .prose-chirpy table {
-    @apply my-6 w-full border-collapse text-left text-sm;
+  .prose-chirpy .table-scroll {
+    @apply my-6 max-w-full overflow-x-auto;
   }
-  .prose-chirpy table th,
-  .prose-chirpy table td {
+  .prose-chirpy .table-scroll table {
+    @apply w-full border-collapse text-left text-sm;
+  }
+  .prose-chirpy .table-scroll th,
+  .prose-chirpy .table-scroll td {
     @apply border-base-300 border px-3 py-2;
   }
-  .prose-chirpy table thead {
+  .prose-chirpy .table-scroll thead {
     @apply bg-base-200;
   }
 
@@ -589,6 +506,34 @@
   .prose-chirpy :not(pre) > code {
     @apply text-primary bg-base-200 rounded px-1.5 py-0.5 text-[0.9em] font-medium;
   }
+}
+
+/* Expressive Code ships unlayered CSS, which takes priority over Tailwind layers. */
+:root[data-theme='chirpy-light'] body .prose-chirpy .expressive-code {
+  --ec-frm-tooltipSuccessBg: #000;
+  --ec-frm-tooltipSuccessFg: #fff;
+}
+:root[data-theme='chirpy-dark'] body .prose-chirpy .expressive-code {
+  --ec-frm-tooltipSuccessBg: #fff;
+  --ec-frm-tooltipSuccessFg: #000;
+}
+
+.tag-post-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.2rem;
+  padding: 0.125rem 0.75rem;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+:root[data-theme='chirpy-light'] .tag-post-count {
+  background-color: #000;
+  color: #fff;
+}
+:root[data-theme='chirpy-dark'] .tag-post-count {
+  background-color: #fff;
+  color: #000;
 }
 
 /* ---------- TOC sticky highlight (uses chirpy-aside rail) ---------- */
@@ -670,19 +615,28 @@
   }
 
   .chirpy-social {
-    @apply hover:text-primary flex h-9 w-9 items-center justify-center rounded-full transition;
+    @apply hover:text-primary flex h-10 w-10 items-center justify-center rounded-full transition;
     color: var(--color-sidebar-text);
     background: color-mix(in oklab, var(--color-sidebar-text) 10%, transparent);
   }
   .chirpy-social:hover {
     background: color-mix(in oklab, var(--color-primary) 14%, transparent);
   }
+
+  .chirpy-theme {
+    @apply border-base-300 bg-base-100 text-base-content/70 hover:text-base-content hover:border-base-content/30 flex h-9 w-9 items-center justify-center rounded-full border transition;
+  }
+
+  .chirpy-breadcrumbs > li + li::before {
+    content: '›';
+    @apply text-base-content/40 shrink-0 px-1;
+  }
 }
 
 /* ---------- Trending tag pill (Chirpy outline-primary) ---------- */
 @layer components {
   .post-tag {
-    @apply border-primary/60 bg-base-100 text-primary hover:bg-primary hover:text-primary-content inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition;
+    @apply border-primary/30 bg-base-100 text-primary hover:bg-primary hover:text-primary-content inline-flex items-center rounded-md border-2 px-3 py-1 text-xs font-semibold transition;
   }
 }
 
@@ -720,6 +674,11 @@
     @apply border-base-300 bg-base-100 text-base-content fixed right-6 bottom-6 z-30 flex h-11 w-11 items-center justify-center rounded-full border shadow-md transition;
     opacity: 0;
     pointer-events: none;
+  }
+  @media (max-width: 1279px) {
+    body:has([data-toc-open]) .back-to-top {
+      bottom: 6rem;
+    }
   }
   .back-to-top.is-visible {
     opacity: 1;

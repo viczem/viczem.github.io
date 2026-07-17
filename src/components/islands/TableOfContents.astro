@@ -13,17 +13,18 @@
  *    currently visible heading reported by IntersectionObserver.
  */
 import { useTranslations } from '../../i18n/utils';
-import type { Locale } from '../../config';
+import { Icon } from 'astro-icon/components';
 import type { MarkdownHeading } from 'astro';
 
 interface Props {
   headings: MarkdownHeading[];
-  locale: Locale;
+  variant?: 'desktop' | 'floating';
 }
 
-const { headings, locale } = Astro.props;
-const t = useTranslations(locale);
+const { headings, variant = 'desktop' } = Astro.props;
+const t = useTranslations();
 const items = headings.filter((h) => h.depth >= 2 && h.depth <= 4);
+const headingId = variant === 'desktop' ? 'toc-heading' : 'toc-heading-floating';
 
 // Pre-compute the "parent H2" slug for every item. For depth=2 it is the
 // item's own slug; for depth=3/4 it is the most recent depth=2 slug
@@ -36,9 +37,9 @@ const decorated = items.map((h) => {
 ---
 
 {
-  items.length > 0 && (
+  items.length > 0 && variant === 'desktop' && (
     <nav
-      aria-labelledby="toc-heading"
+      aria-labelledby={headingId}
       class="toc sticky top-20 hidden max-h-[calc(100vh-6rem)] overflow-y-auto pr-2 text-sm xl:block"
     >
       <h2
@@ -60,12 +61,65 @@ const decorated = items.map((h) => {
   )
 }
 
+{
+  items.length > 0 && variant === 'floating' && (
+    <>
+      <button
+        type="button"
+        class="toc-floating-button border-base-300 bg-base-100 text-base-content fixed right-6 bottom-6 z-30 flex h-11 w-11 items-center justify-center rounded-full border shadow-md transition xl:hidden"
+        aria-label={t('post.toc')}
+        title={t('post.toc')}
+        data-toc-open
+      >
+        <Icon name="lucide:list-tree" width={18} height={18} />
+      </button>
+
+      <dialog data-toc-dialog class="modal modal-bottom xl:hidden" aria-labelledby={headingId}>
+        <div class="modal-box bg-base-100 border-base-300 max-h-[75vh] rounded-t-2xl border p-0 shadow-2xl">
+          <div class="border-base-300 flex items-center justify-between gap-3 border-b px-5 py-3">
+            <h2
+              id={headingId}
+              class="text-base-content text-sm font-semibold tracking-wide uppercase"
+            >
+              {t('post.toc')}
+            </h2>
+            <form method="dialog" class="shrink-0">
+              <button
+                class="text-base-content/70 hover:bg-base-200 hover:text-base-content inline-flex h-8 w-8 items-center justify-center rounded-md transition"
+                aria-label={t('search.closeLabel')}
+                title={t('search.closeLabel')}
+              >
+                <Icon name="lucide:x" width={16} height={16} />
+              </button>
+            </form>
+          </div>
+
+          <nav
+            class="toc max-h-[calc(75vh-3.75rem)] overflow-y-auto px-5 py-4 text-sm"
+            aria-labelledby={headingId}
+          >
+            <ol class="toc-list space-y-1">
+              {decorated.map((h) => (
+                <li class={`toc-level-${h.depth}`} data-toc-parent={h.parent}>
+                  <a href={`#${h.slug}`} data-toc-link={h.slug} data-toc-depth={h.depth}>
+                    {h.text}
+                  </a>
+                </li>
+              ))}
+            </ol>
+          </nav>
+        </div>
+      </dialog>
+    </>
+  )
+}
+
 <script>
-  function initSmartToc() {
-    const root = document.querySelector<HTMLElement>('.toc');
-    if (!root) return;
+  function initTocRoot(root: HTMLElement) {
+    if (root.dataset.tocReady === 'true') return;
     const links = root.querySelectorAll<HTMLAnchorElement>('[data-toc-link]');
     if (!links.length) return;
+    root.dataset.tocReady = 'true';
 
     const items = root.querySelectorAll<HTMLLIElement>('li[data-toc-parent]');
 
@@ -126,6 +180,26 @@ const decorated = items.map((h) => {
     );
 
     headingEls.forEach((h) => observer.observe(h));
+  }
+
+  function initTocDialog() {
+    const dialog = document.querySelector<HTMLDialogElement>('[data-toc-dialog]');
+    const openButton = document.querySelector<HTMLButtonElement>('[data-toc-open]');
+    if (!dialog || !openButton || dialog.dataset.tocDialogReady === 'true') return;
+    dialog.dataset.tocDialogReady = 'true';
+
+    openButton.addEventListener('click', () => dialog.showModal());
+    dialog.addEventListener('click', (event) => {
+      if (event.target === dialog) dialog.close();
+    });
+    dialog.querySelectorAll<HTMLAnchorElement>('[data-toc-link]').forEach((link) => {
+      link.addEventListener('click', () => dialog.close());
+    });
+  }
+
+  function initSmartToc() {
+    document.querySelectorAll<HTMLElement>('.toc').forEach(initTocRoot);
+    initTocDialog();
   }
 
   initSmartToc();

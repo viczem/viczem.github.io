@@ -3,65 +3,30 @@
  *
  * Wraps the `astro:content` collection API to:
  *  - filter drafts in production
- *  - infer locale from filesystem path (posts/en/foo -> 'en')
  *  - sort by pubDate desc, with pinned posts first
- *  - group posts by tag / category / month
- *  - resolve translation siblings via `translationKey`
+ *  - group posts by tag / month
  */
 
 import type { ImageMetadata } from 'astro';
 import { getCollection, type CollectionEntry } from 'astro:content';
 
-import { SITE, type Locale } from '../config';
-import { withBase } from '../i18n/utils';
+import { SITE } from '../config';
+import { htmlLang, withBase } from '../i18n/utils';
 import { slugify } from './slugify';
 
-export type Post = CollectionEntry<'posts'> & {
-  data: CollectionEntry<'posts'>['data'] & { lang: Locale; translationKey: string };
-};
+export type Post = CollectionEntry<'posts'>;
 
 const isProd = import.meta.env.PROD;
 const skipPostCollections = import.meta.env.CI_SKIP_CONTENT_COLLECTIONS === 'true';
 
-/** Derive the locale from `posts/<locale>/foo` slug-ish ID. */
-function localeFromId(id: string): Locale {
-  const seg = id.split(/[\\/]/)[0];
-  if (seg && (SITE.locales as readonly string[]).includes(seg)) return seg as Locale;
-  return SITE.defaultLocale;
-}
-
-/** Strip locale prefix from a content ID. */
-function stripLocaleFromId(id: string): string {
-  const segs = id.split(/[\\/]/);
-  if (segs[0] && (SITE.locales as readonly string[]).includes(segs[0])) {
-    return segs.slice(1).join('/');
-  }
-  return id;
-}
-
-/** Normalize a post entry: ensure `lang` and `translationKey` are set. */
-function normalize(entry: CollectionEntry<'posts'>): Post {
-  const lang = entry.data.lang ?? localeFromId(entry.id);
-  const translationKey = entry.data.translationKey ?? stripLocaleFromId(entry.id);
-  return {
-    ...entry,
-    data: { ...entry.data, lang, translationKey },
-  } as Post;
-}
-
-/** Public slug used for the URL: filename minus locale and extension. */
+/** Public slug used for the URL: filename minus extension. */
 export function postSlug(entry: Post): string {
-  return stripLocaleFromId(entry.id).replace(/\.(md|mdx)$/i, '');
+  return entry.id.replace(/\.(md|mdx)$/i, '');
 }
 
-/** Full localized URL path for a post. */
+/** Full public URL path for a post. */
 export function postPath(entry: Post): string {
-  const slug = postSlug(entry);
-  const path =
-    entry.data.lang === SITE.defaultLocale
-      ? `/posts/${slug}/`
-      : `/${entry.data.lang}/posts/${slug}/`;
-  return withBase(path);
+  return withBase(`/${postSlug(entry)}/`);
 }
 
 /** Sort posts: pinned first, then by pubDate desc. */
@@ -89,59 +54,41 @@ export function sortPostsByDate(posts: Post[]): Post[] {
   });
 }
 
-/** Get all posts for a locale (drafts + unlisted hidden in prod, sorted). */
-export async function getPosts(locale: Locale): Promise<Post[]> {
+/** Get all listed posts (drafts + unlisted hidden in production, sorted). */
+export async function getPosts(): Promise<Post[]> {
   if (skipPostCollections) return [];
   const all = await getCollection('posts', (entry) => {
     if (isProd && entry.data.draft) return false;
     if (entry.data.unlisted) return false;
-    const lang = entry.data.lang ?? localeFromId(entry.id);
-    return lang === locale;
+    return true;
   });
-  return sortPosts(all.map(normalize));
+  return sortPosts(all);
 }
 
 /**
- * Get unlisted posts for a locale (used only in `getStaticPaths` so
+ * Get unlisted posts (used only in `getStaticPaths` so
  * their URLs are still generated and accessible by direct link).
  * Drafts are still excluded in production.
  */
-export async function getUnlistedPosts(locale: Locale): Promise<Post[]> {
+export async function getUnlistedPosts(): Promise<Post[]> {
   if (skipPostCollections) return [];
   const all = await getCollection('posts', (entry) => {
     if (isProd && entry.data.draft) return false;
     if (!entry.data.unlisted) return false;
-    const lang = entry.data.lang ?? localeFromId(entry.id);
-    return lang === locale;
+    return true;
   });
-  return sortPosts(all.map(normalize));
+  return sortPosts(all);
 }
 
-/** Find a single post by locale + slug (path-relative). */
-export async function getPostBySlug(locale: Locale, slug: string): Promise<Post | undefined> {
-  const posts = await getPosts(locale);
+/** Find a single post by slug (path-relative). */
+export async function getPostBySlug(slug: string): Promise<Post | undefined> {
+  const posts = await getPosts();
   return posts.find((p) => postSlug(p) === slug);
 }
 
-/** All translation siblings of a post (other locales sharing translationKey). */
-export async function getTranslations(entry: Post): Promise<Record<Locale, Post | undefined>> {
-  const out: Partial<Record<Locale, Post | undefined>> = {};
-  for (const locale of SITE.locales) {
-    if (locale === entry.data.lang) {
-      out[locale] = entry;
-      continue;
-    }
-    const all = await getPosts(locale);
-    out[locale] = all.find((p) => p.data.translationKey === entry.data.translationKey);
-  }
-  return out as Record<Locale, Post | undefined>;
-}
-
-/** Tags for a locale, with counts, sorted by count desc then alpha. */
-export async function getTagsWithCount(
-  locale: Locale,
-): Promise<Array<{ name: string; count: number }>> {
-  const posts = await getPosts(locale);
+/** Tags with counts, sorted by count desc then alpha. */
+export async function getTagsWithCount(): Promise<Array<{ name: string; count: number }>> {
+  const posts = await getPosts();
   const map = new Map<string, number>();
   for (const p of posts) {
     for (const t of p.data.tags) map.set(t, (map.get(t) ?? 0) + 1);
@@ -151,24 +98,9 @@ export async function getTagsWithCount(
     .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 }
 
-/** Categories for a locale, with counts. */
-export async function getCategoriesWithCount(
-  locale: Locale,
-): Promise<Array<{ name: string; count: number }>> {
-  const posts = await getPosts(locale);
-  const map = new Map<string, number>();
-  for (const p of posts) {
-    for (const c of p.data.categories) map.set(c, (map.get(c) ?? 0) + 1);
-  }
-  return Array.from(map.entries())
-    .map(([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
-}
-
 /** Group posts by year -> month for the archives page. */
 export function groupByYearMonth(
   posts: Post[],
-  locale: Locale,
 ): Array<{
   year: number;
   months: Array<{ month: number; label: string; posts: Post[] }>;
@@ -184,8 +116,7 @@ export function groupByYearMonth(
     if (!months.has(m)) months.set(m, []);
     months.get(m)!.push(post);
   }
-  const lang = locale === 'fr' ? 'fr-FR' : 'en-US';
-  const fmt = new Intl.DateTimeFormat(lang, { month: 'long' });
+  const fmt = new Intl.DateTimeFormat(htmlLang(), { month: 'long' });
   return Array.from(buckets.entries())
     .sort((a, b) => b[0] - a[0])
     .map(([year, months]) => ({
@@ -244,17 +175,8 @@ export function heroImage(post: Post): ImageMetadata | string | undefined {
 
 export { slugify } from './slugify';
 
-/** Build the URL for a tag listing page in a given locale. */
-export function tagPath(locale: Locale, tag: string): string {
+/** Build the URL for a tag listing page. */
+export function tagPath(tag: string): string {
   const slug = slugify(tag);
-  const path = locale === SITE.defaultLocale ? `/tags/${slug}/` : `/${locale}/tags/${slug}/`;
-  return withBase(path);
-}
-
-/** Build the URL for a category listing page in a given locale. */
-export function categoryPath(locale: Locale, category: string): string {
-  const slug = slugify(category);
-  const path =
-    locale === SITE.defaultLocale ? `/categories/${slug}/` : `/${locale}/categories/${slug}/`;
-  return withBase(path);
+  return withBase(`/tags/${slug}/`);
 }
