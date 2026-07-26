@@ -2,35 +2,39 @@
 import BaseLayout from '~/layouts/BaseLayout.astro';
 import PostList from '~/components/PostList.astro';
 import { useTranslations, localizedPath } from '~/i18n/utils';
-import { getPosts, getTagsWithCount, slugify } from '~/utils/posts';
+import { getTagsWithPosts, type TagWithPosts } from '~/utils/tags';
 import { Icon } from 'astro-icon/components';
 
 interface Props {
-  tagName: string;
+  tag: TagWithPosts;
 }
 
 export async function getStaticPaths() {
-  const tags = await getTagsWithCount();
+  const tags = await getTagsWithPosts();
   return tags.map((tag) => ({
-    params: { tag: slugify(tag.name) },
-    props: { tagName: tag.name },
+    params: { tag: tag.slug },
+    props: { tag },
   }));
 }
 
-const { tagName } = Astro.props as Props;
-const { tag } = Astro.params;
+const { tag } = Astro.props as Props;
 const t = useTranslations();
-const posts = (await getPosts()).filter((p) => p.data.tags.some((tg) => slugify(tg) === tag));
 ---
 
-<BaseLayout title={tagName} crumbs={[{ label: t('tags.title'), href: localizedPath('/tags/') }, { label: tagName }]}>
+<BaseLayout
+  title={tag.entry.data.name}
+  crumbs={[
+    { label: t('tags.title'), href: localizedPath('/tags/') },
+    { label: tag.entry.data.name },
+  ]}
+>
   <header class="mb-6">
     <p class="text-base-content/70 text-sm tracking-wide uppercase">{t('list.tagPosts')}</p>
     <h1 class="flex items-center gap-2 text-3xl font-bold tracking-tight">
       <Icon name="lucide:tag" width={28} height={28} aria-hidden="true" />
-      {tagName}
-      <span class="tag-post-count">{posts.length}</span>
+      {tag.entry.data.name}
+      <span class="tag-post-count">{tag.posts.length}</span>
     </h1>
   </header>
-  <PostList posts={posts} />
+  <PostList posts={tag.posts} />
 </BaseLayout>

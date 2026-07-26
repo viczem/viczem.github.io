@@ -8,6 +8,8 @@ import { glob } from 'astro/loaders';
 import { defineCollection, type SchemaContext } from 'astro:content';
 import { z } from 'zod';
 
+import { GITHUB_REPOSITORY_PATTERN, REPOSITORY_SLUG_PATTERN } from './utils/repository';
+
 /**
  * Build the post / page frontmatter schema.
  *
@@ -27,7 +29,6 @@ const baseFrontmatter = ({ image }: SchemaContext) =>
     description: z.string().min(1).max(280),
     pubDate: z.coerce.date(),
     updatedDate: z.coerce.date().optional(),
-    tags: z.array(z.string()).default([]),
     draft: z.boolean().default(false),
     heroImage: z.union([image(), z.string()]).optional(),
     /** Optional alt-text for the hero/featured image. */
@@ -68,14 +69,41 @@ const baseFrontmatter = ({ image }: SchemaContext) =>
     unlistedHideFromSeo: z.boolean().optional(),
   });
 
-export type PostFrontmatter = z.infer<ReturnType<typeof baseFrontmatter>>;
+const postFrontmatter = (ctx: SchemaContext) =>
+  baseFrontmatter(ctx).extend({
+    tags: z.array(z.string().regex(REPOSITORY_SLUG_PATTERN)).default([]),
+    repositories: z.array(z.string().regex(REPOSITORY_SLUG_PATTERN)).default([]),
+  });
+
+export type PostFrontmatter = z.infer<ReturnType<typeof postFrontmatter>>;
 
 const posts = defineCollection({
   loader: glob({
     pattern: '**/*.{md,mdx}',
     base: './src/content/posts',
   }),
-  schema: baseFrontmatter,
+  schema: postFrontmatter,
+});
+
+const repos = defineCollection({
+  loader: glob({
+    pattern: '**/*.{yaml,yml}',
+    base: './src/content/repos',
+  }),
+  schema: z.object({
+    github: z.string().regex(GITHUB_REPOSITORY_PATTERN),
+    description: z.string().min(1).max(280),
+  }),
+});
+
+const tags = defineCollection({
+  loader: glob({
+    pattern: '**/*.{yaml,yml}',
+    base: './src/content/tags',
+  }),
+  schema: z.object({
+    name: z.string().min(1).max(80),
+  }),
 });
 
 const pages = defineCollection({
@@ -92,4 +120,4 @@ const pages = defineCollection({
       }),
 });
 
-export const collections = { posts, pages };
+export const collections = { posts, pages, repos, tags };

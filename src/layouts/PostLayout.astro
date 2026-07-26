@@ -8,31 +8,25 @@ import MathStyles from '../components/MathStyles.astro';
 import { Icon } from 'astro-icon/components';
 import { SITE, TELEGRAM_COMMENTS } from '../config';
 import { useTranslations, formatDate, isoDate } from '../i18n/utils';
-import { readingTime } from '../utils/reading-time';
-import {
-  type Post,
-  tagPath,
-  postSlug,
-  heroImage,
-  heroImageSrc,
-  shouldShowHero,
-} from '../utils/posts';
+import { type Post, postSlug, heroImage, heroImageSrc, shouldShowHero } from '../utils/posts';
 import { buildSeo } from '../utils/seo';
+import { getRepositoriesForPost, repositoryPath } from '../utils/repositories';
+import { getTagsForPost, tagPath } from '../utils/tags';
 import type { MarkdownHeading } from 'astro';
 
 interface Props {
   post: Post;
   /** Astro's `headings` array from `await render(post)`. */
   headings: MarkdownHeading[];
-  /** Raw body string used for reading time. */
-  body: string;
   prev?: Post;
   next?: Post;
 }
 
-const { post, headings, body, prev, next } = Astro.props;
+const { post, headings, prev, next } = Astro.props;
 const t = useTranslations();
-const minutes = readingTime(body).minutes;
+const repositories = await getRepositoriesForPost(post);
+const tags = await getTagsForPost(post);
+const tagNames = tags.map((tag) => tag.entry.data.name);
 
 const commentsDisabled = post.data.comments === false;
 const telegramCommentsEnabled =
@@ -65,7 +59,7 @@ const seo = buildSeo({
   type: 'article',
   publishedTime: post.data.pubDate,
   modifiedTime: post.data.updatedDate,
-  tags: post.data.tags,
+  tags: tagNames,
   // An unlisted post hides from SEO by default unless the author
   // explicitly sets `unlistedHideFromSeo: false`.
   noindex: post.data.unlisted && (post.data.unlistedHideFromSeo ?? true),
@@ -80,7 +74,7 @@ const crumbs = [{ label: post.data.title }];
   type="article"
   publishedTime={post.data.pubDate}
   modifiedTime={post.data.updatedDate}
-  tags={post.data.tags}
+  tags={tagNames}
   crumbs={crumbs}
   seo={seo}
 >
@@ -99,17 +93,39 @@ const crumbs = [{ label: post.data.title }];
   <article class={articleClass}>
     <header class="mb-8">
       <h1
-        class="text-base-content text-3xl leading-tight font-extrabold tracking-tight sm:text-[2.25rem]"
+        class="text-base-content text-3xl leading-none font-extrabold tracking-tight sm:text-[2.25rem] sm:leading-tight"
       >
         {post.data.title}
       </h1>
-      <p class="text-base-content/65 mt-3 text-lg">{post.data.description}</p>
+      <p class="text-base-content/65 mt-4 text-lg">{post.data.description}</p>
 
       <div class="text-base-content/70 mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
         <span class="inline-flex items-center gap-1">
           <Icon name="lucide:calendar-days" width={14} height={14} />
           <time datetime={isoDate(post.data.pubDate)}>{formatDate(post.data.pubDate)}</time>
         </span>
+        {
+          repositories.length > 0 && (
+            <span class="inline-flex items-center gap-1.5">
+              <Icon
+                name="lucide:github"
+                width={15}
+                height={15}
+                class="shrink-0"
+                aria-label={t('post.repositories')}
+                role="img"
+              />
+              {repositories.map((repository) => (
+                <a
+                  href={repositoryPath(repository.slug)}
+                  class="text-primary font-semibold hover:underline"
+                >
+                  {repository.entry.data.github}
+                </a>
+              ))}
+            </span>
+          )
+        }
         {
           post.data.updatedDate && (
             <span class="inline-flex items-center gap-1">
@@ -120,11 +136,6 @@ const crumbs = [{ label: post.data.title }];
             </span>
           )
         }
-        <span class="inline-flex items-center gap-1">
-          <Icon name="lucide:clock" width={14} height={14} />
-          {minutes}
-          {t('post.readingTime')}
-        </span>
       </div>
     </header>
 
@@ -154,7 +165,7 @@ const crumbs = [{ label: post.data.title }];
     </div>
 
     {
-      post.data.tags.length > 0 && (
+      tags.length > 0 && (
         <footer class="mt-10 flex flex-wrap items-center gap-2">
           <span class="text-base-content/70 inline-flex h-6 w-6 items-center justify-center">
             <Icon
@@ -165,9 +176,9 @@ const crumbs = [{ label: post.data.title }];
               role="img"
             />
           </span>
-          {post.data.tags.map((tag) => (
-            <a href={tagPath(tag)} class="post-tag text-xs">
-              {tag}
+          {tags.map((tag) => (
+            <a href={tagPath(tag.slug)} class="post-tag text-xs">
+              {tag.entry.data.name}
             </a>
           ))}
         </footer>

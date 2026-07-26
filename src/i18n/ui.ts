@@ -2,6 +2,7 @@ export const messages = {
   'site.skipToContent': 'Перейти к содержимому',
   'nav.home': 'Главная',
   'nav.posts': 'Посты',
+  'nav.repos': 'Проекты',
   'nav.tags': 'Теги',
   'nav.archives': 'Архив',
   'nav.about': 'О сайте',
@@ -18,6 +19,7 @@ export const messages = {
   'post.readingTime': 'мин. чтения',
   'post.toc': 'Содержание',
   'post.tags': 'Теги',
+  'post.repositories': 'Проекты',
   'post.previous': 'Предыдущий',
   'post.next': 'Следующий',
   'post.comments': 'Комментарии',
@@ -30,6 +32,7 @@ export const messages = {
   'list.allPosts': 'Все посты',
   'list.empty': 'Посты не найдены.',
   'list.tagPosts': 'Посты с тегом',
+  'list.repositoryPosts': 'Посты о проекте',
   'list.totalPosts': 'постов',
   'list.totalPostsOne': 'пост',
 
@@ -43,6 +46,10 @@ export const messages = {
 
   'tags.title': 'Теги',
   'tags.empty': 'Тегов пока нет.',
+
+  'repos.title': 'Проекты',
+  'repos.empty': 'Проектов пока нет.',
+  'repos.openGitHub': 'Открыть на GitHub',
 
   'search.title': 'Поиск',
   'search.placeholder': 'Поиск по сайту',

@@ -11,6 +11,7 @@
   "scripts": {
     "dev": "astro dev --force",
     "start": "astro dev --force",
+    "stop": "astro dev stop --force",
     "build": "SKIP_KEYSTATIC=true astro build --force && bun run pagefind",
     "preview": "astro preview",
     "serve": "bun run build && bun preview",

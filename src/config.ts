@@ -110,6 +110,7 @@ export const SITE: SiteConfig = {
 
 export const NAV: readonly NavItem[] = [
   { key: 'home', href: '/', icon: 'lucide:home' },
+  { key: 'repos', href: '/repos', icon: 'lucide:github' },
   { key: 'tags', href: '/tags', icon: 'lucide:tag' },
   { key: 'archives', href: '/archives', icon: 'lucide:archive' },
   { key: 'about', href: '/about', icon: 'lucide:info' },

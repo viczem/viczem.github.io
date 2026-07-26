@@ -1,0 +1,25 @@
+---
+import { githubStargazersUrl, githubStarsBadgeUrl } from '../utils/repository';
+
+interface Props {
+  repository: string;
+}
+
+const { repository } = Astro.props;
+---
+
+<a
+  href={githubStargazersUrl(repository)}
+  class="inline-flex min-h-5 min-w-20 items-center"
+  target="_blank"
+  rel="noopener noreferrer"
+  aria-label={`Звёзды ${repository} на GitHub`}
+>
+  <img
+    src={githubStarsBadgeUrl(repository)}
+    alt={`Звёзды ${repository} на GitHub`}
+    height="20"
+    loading="lazy"
+    decoding="async"
+  />
+</a>

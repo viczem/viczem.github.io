@@ -9,10 +9,10 @@
  * Route: /og/[...slug].png
  * Example: /og/welcome.png → OG image for the "welcome" post
  */
-/* global Response */
 import type { GetStaticPaths } from 'astro';
 import { generateOgImage } from '../../utils/og-image';
 import { getPosts, postSlug, type Post } from '../../utils/posts';
+import { getTagsForPost } from '../../utils/tags';
 import { SITE } from '../../config';
 import { formatDate } from '../../i18n/utils';
 
@@ -21,10 +21,12 @@ export const getStaticPaths: GetStaticPaths = async () => {
   if (!SITE.autoOgImage || import.meta.env.CI_SKIP_AUTO_OG_IMAGE === 'true') return [];
 
   const posts = await getPosts();
-  return posts.filter((post) => !post.data.heroImage).map((post) => ({
-    params: { slug: postSlug(post) },
-    props: { post },
-  }));
+  return posts
+    .filter((post) => !post.data.heroImage)
+    .map((post) => ({
+      params: { slug: postSlug(post) },
+      props: { post },
+    }));
 };
 
 interface Props {
@@ -35,12 +37,13 @@ export async function GET({ props }: { props: Props }) {
   const { post } = props;
 
   const date = post.data.pubDate ? formatDate(post.data.pubDate) : undefined;
+  const tags = (await getTagsForPost(post)).map((tag) => tag.entry.data.name);
 
   const png = await generateOgImage({
     title: post.data.title,
     description: post.data.description,
     date,
-    tags: post.data.tags,
+    tags,
   });
 
   return new Response(new Uint8Array(png), {

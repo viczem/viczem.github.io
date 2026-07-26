@@ -1,10 +1,10 @@
 ---
 import BaseLayout from '~/layouts/BaseLayout.astro';
 import { useTranslations } from '~/i18n/utils';
-import { getTagsWithCount, tagPath } from '~/utils/posts';
+import { getTagsWithPosts, tagPath } from '~/utils/tags';
 
 const t = useTranslations();
-const tags = await getTagsWithCount();
+const tags = await getTagsWithPosts();
 ---
 
 <BaseLayout title={t('tags.title')} crumbs={[{ label: t('tags.title') }]}>
@@ -15,14 +15,14 @@ const tags = await getTagsWithCount();
     tags.length === 0 ? (
       <p class="text-base-content/70">{t('tags.empty')}</p>
     ) : (
-        <ul class="flex flex-wrap gap-2">
-          {tags.map((tag) => (
-            <li>
-              <a href={tagPath(tag.name)} class="post-tag gap-1.5 text-xs">
-                {tag.name}
-                <span class="opacity-70">{tag.count}</span>
-              </a>
-            </li>
+      <ul class="flex flex-wrap gap-2">
+        {tags.map((tag) => (
+          <li>
+            <a href={tagPath(tag.slug)} class="post-tag gap-1.5 text-xs">
+              {tag.entry.data.name}
+              <span class="opacity-70">{tag.posts.length}</span>
+            </a>
+          </li>
         ))}
       </ul>
     )

@@ -4,7 +4,7 @@
  * Wraps the `astro:content` collection API to:
  *  - filter drafts in production
  *  - sort by pubDate desc, with pinned posts first
- *  - group posts by tag / month
+ *  - group posts by month
  */
 
 import type { ImageMetadata } from 'astro';
@@ -12,7 +12,6 @@ import { getCollection, type CollectionEntry } from 'astro:content';
 
 import { SITE } from '../config';
 import { htmlLang, withBase } from '../i18n/utils';
-import { slugify } from './slugify';
 
 export type Post = CollectionEntry<'posts'>;
 
@@ -86,22 +85,8 @@ export async function getPostBySlug(slug: string): Promise<Post | undefined> {
   return posts.find((p) => postSlug(p) === slug);
 }
 
-/** Tags with counts, sorted by count desc then alpha. */
-export async function getTagsWithCount(): Promise<Array<{ name: string; count: number }>> {
-  const posts = await getPosts();
-  const map = new Map<string, number>();
-  for (const p of posts) {
-    for (const t of p.data.tags) map.set(t, (map.get(t) ?? 0) + 1);
-  }
-  return Array.from(map.entries())
-    .map(([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
-}
-
 /** Group posts by year -> month for the archives page. */
-export function groupByYearMonth(
-  posts: Post[],
-): Array<{
+export function groupByYearMonth(posts: Post[]): Array<{
   year: number;
   months: Array<{ month: number; label: string; posts: Post[] }>;
 }> {
@@ -174,9 +159,3 @@ export function heroImage(post: Post): ImageMetadata | string | undefined {
 }
 
 export { slugify } from './slugify';
-
-/** Build the URL for a tag listing page. */
-export function tagPath(tag: string): string {
-  const slug = slugify(tag);
-  return withBase(`/tags/${slug}/`);
-}

@@ -35,15 +35,8 @@ export async function getStaticPaths() {
 
 const { post, prev, next } = Astro.props as Props;
 const { Content, headings } = await render(post);
-const body = post.body ?? '';
 ---
 
-<PostLayout
-  post={post}
-  headings={headings}
-  body={body}
-  prev={prev}
-  next={next}
->
+<PostLayout post={post} headings={headings} prev={prev} next={next}>
   <Content />
 </PostLayout>

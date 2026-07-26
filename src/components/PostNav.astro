@@ -10,56 +10,43 @@ interface Props {
 
 const { prev, next } = Astro.props;
 const t = useTranslations();
+const hasBoth = Boolean(prev && next);
 ---
 
-<nav aria-label="Post navigation" class="mt-10 grid gap-4 sm:grid-cols-2">
+<nav aria-label="Post navigation" class:list={['mt-10 grid gap-4', hasBoth && 'sm:grid-cols-2']}>
   {
-    prev ? (
+    prev && (
       <a
         href={postPath(prev)}
         rel="prev"
-        class="card bg-base-200 hover:bg-base-300 transition-colors"
+        class="card border-base-300 bg-base-200 hover:border-primary/40 hover:bg-base-300 border transition-colors"
       >
         <div class="card-body">
-          <p class="text-base-content/70 text-xs tracking-wide uppercase">
-            <Icon
-              name="lucide:arrow-up"
-              width={12}
-              height={12}
-              class="inline -rotate-90 align-baseline"
-            />
-            {t('post.previous')}
+          <p class="text-base-content/70 inline-flex flex-none items-center gap-2 text-xs tracking-wide uppercase">
+            <Icon name="lucide:arrow-left" width={16} height={16} class="shrink-0" />
+            <span class="translate-y-px leading-none">{t('post.previous')}</span>
           </p>
-          <p class="font-semibold">{prev.data.title}</p>
+          <p class="leading-tight font-semibold">{prev.data.title}</p>
         </div>
       </a>
-    ) : (
-      <span aria-hidden="true" class="hidden sm:block" />
     )
   }
 
   {
-    next ? (
+    next && (
       <a
         href={postPath(next)}
         rel="next"
-        class="card bg-base-200 hover:bg-base-300 transition-colors sm:text-right"
+        class="card border-base-300 bg-base-200 hover:border-primary/40 hover:bg-base-300 border transition-colors sm:text-right"
       >
         <div class="card-body">
-          <p class="text-base-content/70 text-xs tracking-wide uppercase">
-            {t('post.next')}
-            <Icon
-              name="lucide:arrow-up"
-              width={12}
-              height={12}
-              class="inline rotate-90 align-baseline"
-            />
+          <p class="text-base-content/70 inline-flex flex-none items-center gap-2 text-xs tracking-wide uppercase sm:justify-end">
+            <span class="translate-y-px leading-none">{t('post.next')}</span>
+            <Icon name="lucide:arrow-right" width={16} height={16} class="shrink-0 text-xs" />
           </p>
-          <p class="font-semibold">{next.data.title}</p>
+          <p class="leading-tight font-semibold">{next.data.title}</p>
         </div>
       </a>
-    ) : (
-      <span aria-hidden="true" class="hidden sm:block" />
     )
   }
 </nav>

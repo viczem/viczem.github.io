@@ -16,26 +16,36 @@ function contentField() {
   });
 }
 
-function imageField(label: string) {
+function imageField(label: string, description?: string) {
   return fields.image({
     label,
+    description,
     directory: postImageDirectory,
     publicPath: postImagePath,
   });
 }
 
-function baseSchema(includePublicationDate: boolean) {
+function baseSchema<PublicationFields extends object>(publicationFields: PublicationFields) {
   return {
     title: fields.slug({
       name: { label: 'Заголовок' },
       slug: { label: 'URL' },
     }),
-    description: fields.text({ label: 'Описание', multiline: true }),
-    ...(includePublicationDate ? { pubDate: fields.date({ label: 'Дата публикации' }) } : {}),
-    updatedDate: fields.date({ label: 'Дата обновления', validation: { isRequired: false } }),
-    tags: fields.array(fields.text({ label: 'Тег' }), { label: 'Теги' }),
+    description: fields.text({
+      label: 'Описание',
+      multiline: true,
+      validation: { isRequired: true, length: { min: 1, max: 280 } },
+    }),
+    ...publicationFields,
+    updatedDate: fields.datetime({
+      label: 'Дата и время обновления',
+      validation: { isRequired: false },
+    }),
     draft: fields.checkbox({ label: 'Черновик', defaultValue: false }),
-    heroImage: imageField('Обложка'),
+    heroImage: imageField(
+      'Обложка',
+      'Рекомендуется 1600×840 px (1.91:1), минимум 1200×630 px. WebP или JPEG до 500 КБ. Важные детали размещайте ближе к центру: в карточках изображение обрезается.',
+    ),
     heroImageAlt: fields.text({ label: 'Описание обложки', validation: { isRequired: false } }),
     showFeaturedImage: fields.checkbox({ label: 'Показывать обложку', defaultValue: true }),
     dynamicPostCardHeight: fields.checkbox({
@@ -44,7 +54,10 @@ function baseSchema(includePublicationDate: boolean) {
     }),
     canonicalURL: fields.url({ label: 'Канонический URL', validation: { isRequired: false } }),
     comments: fields.checkbox({ label: 'Комментарии включены', defaultValue: true }),
-    telegramPostId: fields.integer({ label: 'ID поста в Telegram', validation: { isRequired: false } }),
+    telegramPostId: fields.integer({
+      label: 'ID поста в Telegram',
+      validation: { isRequired: false },
+    }),
     toc: fields.checkbox({ label: 'Показывать содержание', defaultValue: true }),
     pinned: fields.checkbox({ label: 'Закрепить пост', defaultValue: false }),
     math: fields.checkbox({ label: 'Использует формулы', defaultValue: false }),
@@ -64,18 +77,87 @@ export default config({
       label: 'Посты',
       slugField: 'title',
       path: 'src/content/posts/*',
+      previewUrl: '/{slug}/',
+      columns: ['pubDate'],
       format: { contentField: 'content' },
       entryLayout: 'content',
-      schema: baseSchema(true),
+      schema: {
+        ...baseSchema({
+          pubDate: fields.datetime({
+            label: 'Дата и время публикации',
+            defaultValue: { kind: 'now' },
+            validation: { isRequired: true },
+          }),
+        }),
+        tags: fields.multiRelationship({
+          label: 'Теги',
+          collection: 'tags',
+          description: 'Выберите связанные с публикацией теги.',
+        }),
+        repositories: fields.multiRelationship({
+          label: 'Проекты',
+          collection: 'repos',
+          description: 'Выберите связанные с публикацией проекты.',
+        }),
+      },
+    }),
+    tags: collection({
+      label: 'Теги',
+      slugField: 'name',
+      path: 'src/content/tags/*',
+      previewUrl: '/tags/{slug}/',
+      format: 'yaml',
+      entryLayout: 'form',
+      schema: {
+        name: fields.slug({
+          name: { label: 'Название' },
+          slug: {
+            label: 'URL (/tags/tag-name)',
+            description: 'После изменения URL заново выберите этот тег в связанных постах.',
+          },
+        }),
+      },
+    }),
+    repos: collection({
+      label: 'Проекты',
+      slugField: 'github',
+      path: 'src/content/repos/*',
+      previewUrl: '/repos/{slug}/',
+      format: 'yaml',
+      entryLayout: 'form',
+      schema: {
+        github: fields.slug({
+          name: {
+            label: 'GitHub (owner/name)',
+            validation: {
+              isRequired: true,
+              pattern: {
+                regex: /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?\/[A-Za-z0-9._-]+$/,
+                message: 'Укажите репозиторий в формате owner/name.',
+              },
+            },
+          },
+          slug: {
+            label: 'URL (/repos/project-name)',
+            description: 'После изменения URL заново выберите этот проект в связанных постах.',
+          },
+        }),
+        description: fields.text({
+          label: 'Описание',
+          multiline: true,
+          validation: { isRequired: true, length: { min: 1, max: 280 } },
+        }),
+      },
     }),
     pages: collection({
       label: 'Страницы',
       slugField: 'title',
       path: 'src/content/pages/*',
+      previewUrl: '/{slug}/',
       format: { contentField: 'content' },
       entryLayout: 'content',
       schema: {
-        ...baseSchema(false),
+        ...baseSchema({}),
         showInNav: fields.checkbox({ label: 'Показывать в навигации', defaultValue: false }),
       },
     }),

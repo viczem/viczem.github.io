@@ -306,7 +306,7 @@
   /* Title and description gain line-clamps so a very long title (or a
      verbose description) cannot push the card past the fixed height. */
   .chirpy-card-title {
-    @apply text-base-content mt-0 text-2xl leading-snug font-bold tracking-tight sm:text-[1.55rem];
+    @apply text-base-content mt-0 text-2xl leading-none sm:leading-tight font-bold tracking-tight sm:text-[1.55rem];
     display: -webkit-box;
     -webkit-line-clamp: 2;
     line-clamp: 2;
