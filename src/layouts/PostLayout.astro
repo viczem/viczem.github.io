@@ -8,7 +8,7 @@ import MathStyles from '../components/MathStyles.astro';
 import { Icon } from 'astro-icon/components';
 import { SITE, TELEGRAM_COMMENTS } from '../config';
 import { useTranslations, formatDate, isoDate } from '../i18n/utils';
-import { type Post, postSlug, heroImage, heroImageSrc, shouldShowHero } from '../utils/posts';
+import { type Post, heroImage, heroImageSrc, shouldShowHero } from '../utils/posts';
 import { buildSeo } from '../utils/seo';
 import { getRepositoriesForPost, repositoryPath } from '../utils/repositories';
 import { getTagsForPost, tagPath } from '../utils/tags';
@@ -44,18 +44,21 @@ const articleClass = SITE.boxedArticles
   ? 'border-base-300 bg-base-100 rounded-md border px-5 py-8 sm:px-8 sm:py-10'
   : '';
 
-// Use hero image for OG if available, otherwise fallback to the generated OG image
-// (unless Auto-OG is disabled globally or skipped in CI).
-const ogSlug = postSlug(post);
-const generatedOgPath = `/og/${ogSlug}.png`;
-const skipAutoOg = !SITE.autoOgImage || import.meta.env.CI_SKIP_AUTO_OG_IMAGE === 'true';
-const ogImage = heroSrc ?? (skipAutoOg ? undefined : generatedOgPath);
+// Use the hero image for social previews when present. buildSeo falls back to
+// the site's default OG image without generating a per-post asset.
+const heroMetadata = typeof heroAsset === 'object' ? heroAsset : undefined;
+const heroMimeType = heroMetadata
+  ? `image/${heroMetadata.format.replace('jpg', 'jpeg')}`
+  : undefined;
 
 const seo = buildSeo({
   title: post.data.title,
   description: post.data.description,
   fullPath: Astro.url.pathname,
-  ogImage,
+  ogImage: heroSrc,
+  ogImageWidth: heroMetadata?.width,
+  ogImageHeight: heroMetadata?.height,
+  ogImageType: heroMimeType,
   type: 'article',
   publishedTime: post.data.pubDate,
   modifiedTime: post.data.updatedDate,
@@ -64,6 +67,31 @@ const seo = buildSeo({
   // explicitly sets `unlistedHideFromSeo: false`.
   noindex: post.data.unlisted && (post.data.unlistedHideFromSeo ?? true),
 });
+
+const articleJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BlogPosting',
+  mainEntityOfPage: {
+    '@type': 'WebPage',
+    '@id': seo.canonical,
+  },
+  headline: post.data.title,
+  description: post.data.description,
+  image: seo.ogImage,
+  datePublished: post.data.pubDate.toISOString(),
+  ...(post.data.updatedDate ? { dateModified: post.data.updatedDate.toISOString() } : {}),
+  author: {
+    '@type': 'Person',
+    name: SITE.author.name,
+    ...(SITE.author.url ? { url: SITE.author.url } : {}),
+  },
+  publisher: {
+    '@type': 'Person',
+    name: SITE.author.name,
+    ...(SITE.author.url ? { url: SITE.author.url } : {}),
+  },
+  ...(tagNames.length > 0 ? { keywords: tagNames } : {}),
+};
 
 const crumbs = [{ label: post.data.title }];
 ---
@@ -78,6 +106,12 @@ const crumbs = [{ label: post.data.title }];
   crumbs={crumbs}
   seo={seo}
 >
+  <script
+    slot="head"
+    is:inline
+    type="application/ld+json"
+    set:html={JSON.stringify(articleJsonLd)}
+  />
   {post.data.math && <MathStyles />}
   {
     post.data.toc && headings.length > 0 && (
@@ -90,19 +124,33 @@ const crumbs = [{ label: post.data.title }];
     )
   }
 
-  <article class={articleClass}>
-    <header class="mb-8">
+  <article
+    class:list={['post', articleClass]}
+    itemscope
+    itemtype="https://schema.org/BlogPosting"
+    itemid={seo.canonical}
+  >
+    <header class="post-header mb-8">
       <h1
-        class="text-base-content text-3xl leading-none font-extrabold tracking-tight sm:text-[2.25rem] sm:leading-tight"
+        class="post-title text-base-content text-3xl leading-none font-extrabold tracking-tight sm:text-[2.25rem] sm:leading-tight"
+        itemprop="headline"
       >
         {post.data.title}
       </h1>
-      <p class="text-base-content/65 mt-4 text-lg">{post.data.description}</p>
+      <p class="post-description text-base-content/65 mt-4 text-lg" itemprop="description">
+        {post.data.description}
+      </p>
 
       <div class="text-base-content/70 mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
         <span class="inline-flex items-center gap-1">
           <Icon name="lucide:calendar-days" width={14} height={14} />
-          <time datetime={isoDate(post.data.pubDate)}>{formatDate(post.data.pubDate)}</time>
+          <time
+            class="post-published"
+            itemprop="datePublished"
+            datetime={isoDate(post.data.pubDate)}
+          >
+            {formatDate(post.data.pubDate)}
+          </time>
         </span>
         {
           repositories.length > 0 && (
@@ -130,7 +178,11 @@ const crumbs = [{ label: post.data.title }];
           post.data.updatedDate && (
             <span class="inline-flex items-center gap-1">
               <Icon name="lucide:check" width={14} height={14} />
-              <time datetime={isoDate(post.data.updatedDate)}>
+              <time
+                class="post-modified"
+                itemprop="dateModified"
+                datetime={isoDate(post.data.updatedDate)}
+              >
                 {t('post.updatedOn')} {formatDate(post.data.updatedDate)}
               </time>
             </span>
@@ -141,7 +193,7 @@ const crumbs = [{ label: post.data.title }];
 
     {
       showHero && heroAsset && (
-        <figure class="post-hero mb-8">
+        <figure class="post-cover post-hero mb-8">
           <div class="post-hero__frame">
             <SmartImage
               src={heroAsset}
@@ -151,6 +203,7 @@ const crumbs = [{ label: post.data.title }];
               widths={[480, 768, 1024, 1280, 1600]}
               sizes="(max-width: 768px) 100vw, 1024px"
               quality={82}
+              itemprop="image"
             />
           </div>
           {heroAlt && (
@@ -160,7 +213,7 @@ const crumbs = [{ label: post.data.title }];
       )
     }
 
-    <div class="prose-chirpy max-w-none">
+    <div class="post-content prose-chirpy max-w-none" itemprop="articleBody">
       <slot />
     </div>
 

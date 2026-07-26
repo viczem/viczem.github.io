@@ -55,6 +55,27 @@ description: Краткое описание назначения проекта
 Значение в `repositories` — имя YAML-файла без расширения. Ссылка на GitHub и badge с
 актуальным количеством звёзд строятся автоматически из поля `github`.
 
+### Превью публикаций
+
+Для превью публикации в Telegram и других сервисах используются `title`, `description`
+и `heroImage` из frontmatter:
+
+```yaml
+title: Название публикации
+description: Краткое описание публикации.
+pubDate: 2026-07-26
+heroImage: ../../assets/images/posts/example.png
+heroImageAlt: Описание изображения
+```
+
+Если `heroImage` не задан, в Open Graph и Schema.org автоматически используется
+`SITE.defaultOgImage` из `src/config.ts`. Отдельные изображения для каждого поста при
+сборке не генерируются.
+
+Страницы публикаций содержат метаданные Open Graph, Twitter Card и Schema.org
+`BlogPosting`, а также стабильные классы `post-title`, `post-description`,
+`post-published`, `post-cover` и `post-content` для Telegram Instant View Template.
+
 Теги также хранятся централизованно и выбираются в Keystatic из коллекции:
 
 ```yaml

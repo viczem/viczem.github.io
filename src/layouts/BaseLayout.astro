@@ -124,6 +124,7 @@ const contentGridClass = hidePanel
         <script is:inline type="application/ld+json" set:html={JSON.stringify(breadcrumbJsonLd)} />
       )
     }
+    <slot name="head" />
     {/* Custom fonts configured via Astro Fonts API */}
     <Font cssVariable="--font-source-sans-3" />
     <Font cssVariable="--font-lato" />

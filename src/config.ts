@@ -72,8 +72,6 @@ export const SITE: SiteConfig = {
   boxedArticles: false,
   /** Allow listing cards to grow when title/description content is longer. */
   dynamicPostCardHeight: false,
-  /** Automatically generate Open Graph images for posts that don't have a `heroImage`. */
-  autoOgImage: true,
   /** Show a link to the Privacy Policy page in the footer. */
   showPrivacyPolicy: false,
   /** Footer text/link controls. */

@@ -1,5 +1,5 @@
 /* global URL */
-import { SITE } from '../config';
+import { SITE, SITE_IMAGES } from '../config';
 import { withBase } from '../i18n/utils';
 
 export interface SeoMeta {
@@ -7,6 +7,9 @@ export interface SeoMeta {
   description: string;
   canonical: string;
   ogImage: string;
+  ogImageWidth?: number;
+  ogImageHeight?: number;
+  ogImageType?: string;
   type: 'website' | 'article';
   publishedTime?: string;
   modifiedTime?: string;
@@ -25,6 +28,9 @@ interface BuildSeoArgs {
   description?: string;
   fullPath: string;
   ogImage?: string;
+  ogImageWidth?: number;
+  ogImageHeight?: number;
+  ogImageType?: string;
   type?: 'website' | 'article';
   publishedTime?: Date;
   modifiedTime?: Date;
@@ -35,11 +41,22 @@ interface BuildSeoArgs {
 
 /** Build the SEO data block consumed by `<SEO />`. */
 export function buildSeo(args: BuildSeoArgs): SeoMeta {
+  const usesDefaultOgImage = !args.ogImage;
+
   return {
     title: args.title && args.title !== SITE.name ? `${args.title} — ${SITE.name}` : SITE.name,
     description: args.description ?? SITE.description,
     canonical: new URL(args.fullPath, SITE.url).toString(),
     ogImage: new URL(withBase(args.ogImage ?? SITE.defaultOgImage), SITE.url).toString(),
+    ogImageWidth:
+      args.ogImageWidth ?? (usesDefaultOgImage ? SITE_IMAGES.ogDefault.width : undefined),
+    ogImageHeight:
+      args.ogImageHeight ?? (usesDefaultOgImage ? SITE_IMAGES.ogDefault.height : undefined),
+    ogImageType:
+      args.ogImageType ??
+      (usesDefaultOgImage
+        ? `image/${SITE_IMAGES.ogDefault.format.replace('jpg', 'jpeg')}`
+        : undefined),
     type: args.type ?? 'website',
     publishedTime: args.publishedTime?.toISOString(),
     modifiedTime: args.modifiedTime?.toISOString(),

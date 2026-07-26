@@ -16,7 +16,6 @@ export interface SiteConfig {
   showFeaturedImages: boolean;
   boxedArticles: boolean;
   dynamicPostCardHeight: boolean;
-  autoOgImage: boolean;
   showPrivacyPolicy: boolean;
   footer: {
     /** Optional full override for the left footer line. Supports {year} and {author}. */
