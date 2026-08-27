@@ -3,6 +3,8 @@ import { withBase } from '../i18n/utils';
 export const GITHUB_REPOSITORY_PATTERN =
   /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?\/[A-Za-z0-9._-]+$/;
 
+export const GITHUB_COMMIT_HASH_PATTERN = /^(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64})$/;
+
 export const REPOSITORY_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 export function normalizeRepositoryName(repository: string): string {
@@ -30,8 +32,16 @@ export function githubRepositoryUrl(repository: string): string {
   return `https://github.com/${owner}/${name}`;
 }
 
+export function githubCommitUrl(repository: string, hash: string): string {
+  if (!GITHUB_COMMIT_HASH_PATTERN.test(hash)) {
+    throw new Error(`Invalid Git commit hash "${hash}". Expected a full 40 or 64 character SHA.`);
+  }
+
+  return `${githubRepositoryUrl(repository)}/commit/${hash}`;
+}
+
 export function githubStargazersUrl(repository: string): string {
-  return `${githubRepositoryUrl(repository)}`;
+  return `${githubRepositoryUrl(repository)}/stargazers`;
 }
 
 export function githubStarsBadgeUrl(repository: string): string {

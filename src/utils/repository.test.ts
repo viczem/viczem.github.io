@@ -1,7 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 
 import {
+  GITHUB_COMMIT_HASH_PATTERN,
   GITHUB_REPOSITORY_PATTERN,
+  githubCommitUrl,
   githubRepositoryUrl,
   githubStargazersUrl,
   githubStarsBadgeUrl,
@@ -19,6 +21,16 @@ describe('GitHub repositories', () => {
   test('rejects incomplete and URL identifiers', () => {
     expect(GITHUB_REPOSITORY_PATTERN.test('project-name')).toBe(false);
     expect(GITHUB_REPOSITORY_PATTERN.test('https://github.com/viczem/project-name')).toBe(false);
+  });
+
+  test('accepts full SHA-1 and SHA-256 commit hashes', () => {
+    expect(GITHUB_COMMIT_HASH_PATTERN.test('a'.repeat(40))).toBe(true);
+    expect(GITHUB_COMMIT_HASH_PATTERN.test('B'.repeat(64))).toBe(true);
+  });
+
+  test('rejects abbreviated and non-hex commit hashes', () => {
+    expect(GITHUB_COMMIT_HASH_PATTERN.test('a'.repeat(7))).toBe(false);
+    expect(GITHUB_COMMIT_HASH_PATTERN.test('g'.repeat(40))).toBe(false);
   });
 
   test('normalizes case for matching', () => {
@@ -53,6 +65,19 @@ describe('GitHub repositories', () => {
     );
     expect(githubStarsBadgeUrl('viczem/project-name')).toBe(
       'https://img.shields.io/github/stars/viczem/project-name?style=social',
+    );
+  });
+
+  test('builds a GitHub commit URL with the full hash', () => {
+    const hash = '0123456789abcdef0123456789abcdef01234567';
+    expect(githubCommitUrl('viczem/project-name', hash)).toBe(
+      `https://github.com/viczem/project-name/commit/${hash}`,
+    );
+  });
+
+  test('rejects an invalid hash before building a commit URL', () => {
+    expect(() => githubCommitUrl('viczem/project-name', 'abc1234')).toThrow(
+      'Expected a full 40 or 64 character SHA',
     );
   });
 });

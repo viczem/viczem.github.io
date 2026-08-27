@@ -10,7 +10,8 @@ import { SITE, TELEGRAM_COMMENTS } from '../config';
 import { useTranslations, formatDate, isoDate } from '../i18n/utils';
 import { type Post, heroImage, heroImageSrc, shouldShowHero } from '../utils/posts';
 import { buildSeo } from '../utils/seo';
-import { getRepositoriesForPost, repositoryPath } from '../utils/repositories';
+import { getRepositoryForPost, repositoryPath } from '../utils/repositories';
+import { githubCommitUrl } from '../utils/repository';
 import { getTagsForPost, tagPath } from '../utils/tags';
 import type { MarkdownHeading } from 'astro';
 
@@ -24,9 +25,12 @@ interface Props {
 
 const { post, headings, prev, next } = Astro.props;
 const t = useTranslations();
-const repositories = await getRepositoriesForPost(post);
+const repository = await getRepositoryForPost(post);
 const tags = await getTagsForPost(post);
 const tagNames = tags.map((tag) => tag.entry.data.name);
+const commitHash = post.data.commitHash;
+const commitUrl =
+  repository && commitHash ? githubCommitUrl(repository.entry.data.github, commitHash) : undefined;
 
 const commentsDisabled = post.data.comments === false;
 const telegramCommentsEnabled =
@@ -153,24 +157,44 @@ const crumbs = [{ label: post.data.title }];
           </time>
         </span>
         {
-          repositories.length > 0 && (
+          repository && (
             <span class="inline-flex items-center gap-1.5">
               <Icon
                 name="lucide:github"
                 width={15}
                 height={15}
                 class="shrink-0"
-                aria-label={t('post.repositories')}
+                aria-label={t('post.repository')}
                 role="img"
               />
-              {repositories.map((repository) => (
-                <a
-                  href={repositoryPath(repository.slug)}
-                  class="text-primary font-semibold hover:underline"
-                >
-                  {repository.entry.data.github}
-                </a>
-              ))}
+              <a
+                href={repositoryPath(repository.slug)}
+                class="text-primary font-semibold hover:underline"
+              >
+                {repository.entry.data.github}
+              </a>
+            </span>
+          )
+        }
+        {
+          commitUrl && commitHash && (
+            <span class="inline-flex items-center gap-1.5">
+              <Icon
+                name="lucide:git-commit"
+                width={15}
+                height={15}
+                class="shrink-0"
+                aria-label={t('post.commit')}
+                role="img"
+              />
+              <a
+                href={commitUrl}
+                class="text-primary inline-flex items-center gap-1 font-mono font-semibold hover:underline"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {commitHash.slice(0, 7)}
+              </a>
             </span>
           )
         }

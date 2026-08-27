@@ -94,10 +94,22 @@ export default config({
           collection: 'tags',
           description: 'Выберите связанные с публикацией теги.',
         }),
-        repositories: fields.multiRelationship({
-          label: 'Проекты',
+        repository: fields.relationship({
+          label: 'Проект',
           collection: 'repos',
-          description: 'Выберите связанные с публикацией проекты.',
+          description: 'Выберите связанный с публикацией проект.',
+          validation: { isRequired: false },
+        }),
+        commitHash: fields.text({
+          label: 'Hash коммита',
+          description: 'Полный SHA коммита выбранного проекта (40 или 64 символа).',
+          validation: {
+            isRequired: false,
+            pattern: {
+              regex: /^(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64})$/,
+              message: 'Укажите полный SHA коммита из 40 или 64 hex-символов.',
+            },
+          },
         }),
       },
     }),

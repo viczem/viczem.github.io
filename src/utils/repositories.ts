@@ -39,21 +39,16 @@ export async function getRepositoriesWithPosts(): Promise<RepositoryWithPosts[]>
   }
 
   for (const post of posts) {
-    const seen = new Set<string>();
-    for (const slug of post.data.repositories) {
-      if (seen.has(slug)) {
-        throw new Error(`Post "${post.id}" references repository "${slug}" more than once.`);
-      }
-      seen.add(slug);
+    const slug = post.data.repository;
+    if (!slug) continue;
 
-      const item = bySlug.get(slug);
-      if (!item) {
-        throw new Error(
-          `Post "${post.id}" references unknown repository "${slug}". Add the matching YAML file to src/content/repos/.`,
-        );
-      }
-      item.posts.push(post);
+    const item = bySlug.get(slug);
+    if (!item) {
+      throw new Error(
+        `Post "${post.id}" references unknown repository "${slug}". Add the matching YAML file to src/content/repos/.`,
+      );
     }
+    item.posts.push(post);
   }
 
   return Array.from(bySlug.values()).sort(
@@ -62,27 +57,19 @@ export async function getRepositoriesWithPosts(): Promise<RepositoryWithPosts[]>
   );
 }
 
-export async function getRepositoriesForPost(post: Post): Promise<RepositoryWithPosts[]> {
-  if (post.data.repositories.length === 0) return [];
+export async function getRepositoryForPost(post: Post): Promise<RepositoryWithPosts | undefined> {
+  const slug = post.data.repository;
+  if (!slug) return undefined;
 
   const repositories = await getRepositoriesWithPosts();
-  const bySlug = new Map(repositories.map((repository) => [repository.slug, repository]));
+  const repository = repositories.find((item) => item.slug === slug);
+  if (!repository) {
+    throw new Error(
+      `Post "${post.id}" references unknown repository "${slug}". Add the matching YAML file to src/content/repos/.`,
+    );
+  }
 
-  const seen = new Set<string>();
-  return post.data.repositories.map((slug) => {
-    if (seen.has(slug)) {
-      throw new Error(`Post "${post.id}" references repository "${slug}" more than once.`);
-    }
-    seen.add(slug);
-
-    const repository = bySlug.get(slug);
-    if (!repository) {
-      throw new Error(
-        `Post "${post.id}" references unknown repository "${slug}". Add the matching YAML file to src/content/repos/.`,
-      );
-    }
-    return repository;
-  });
+  return repository;
 }
 
 export { repositoryPath };

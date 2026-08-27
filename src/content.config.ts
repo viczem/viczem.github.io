@@ -8,7 +8,11 @@ import { glob } from 'astro/loaders';
 import { defineCollection, type SchemaContext } from 'astro:content';
 import { z } from 'zod';
 
-import { GITHUB_REPOSITORY_PATTERN, REPOSITORY_SLUG_PATTERN } from './utils/repository';
+import {
+  GITHUB_COMMIT_HASH_PATTERN,
+  GITHUB_REPOSITORY_PATTERN,
+  REPOSITORY_SLUG_PATTERN,
+} from './utils/repository';
 
 /**
  * Build the post / page frontmatter schema.
@@ -72,7 +76,8 @@ const baseFrontmatter = ({ image }: SchemaContext) =>
 const postFrontmatter = (ctx: SchemaContext) =>
   baseFrontmatter(ctx).extend({
     tags: z.array(z.string().regex(REPOSITORY_SLUG_PATTERN)).default([]),
-    repositories: z.array(z.string().regex(REPOSITORY_SLUG_PATTERN)).default([]),
+    repository: z.string().regex(REPOSITORY_SLUG_PATTERN).optional(),
+    commitHash: z.string().regex(GITHUB_COMMIT_HASH_PATTERN).optional(),
   });
 
 export type PostFrontmatter = z.infer<ReturnType<typeof postFrontmatter>>;
