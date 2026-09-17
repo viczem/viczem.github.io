@@ -1,7 +1,6 @@
 import process from 'node:process';
 import avatarDarkImg from './assets/images/site/avatar-dark.png';
 import avatarLightImg from './assets/images/site/avatar-light.png';
-import favicon240Img from './assets/images/site/favicon240.png';
 import type { NavItem, SiteConfig, SocialLink, TelegramCommentsConfig } from './types/config';
 
 /**
@@ -13,7 +12,7 @@ import type { NavItem, SiteConfig, SocialLink, TelegramCommentsConfig } from './
 // Export imported site images for use in components
 export const SITE_IMAGES = {
   avatar: { light: avatarLightImg, dark: avatarDarkImg },
-  ogDefault: favicon240Img,
+  ogDefault: avatarDarkImg,
 } as const;
 
 /**
@@ -60,8 +59,8 @@ export const SITE: SiteConfig = {
     avatar: SITE_IMAGES.avatar,
     bio: 'Проекты, код и open source',
   },
-  /** Square icon used in social previews without a page-specific image. */
-  defaultOgImage: favicon240Img.src,
+  /** Square avatar used in social previews without a page-specific image. */
+  defaultOgImage: avatarDarkImg.src,
   /** Number of posts per page on listings. */
   postsPerPage: 8,
   /** Display ISO 8601 date format if true, otherwise use Russian locale formatting. */
