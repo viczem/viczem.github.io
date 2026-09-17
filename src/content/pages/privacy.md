@@ -1,8 +1,17 @@
 ---
 title: Политика конфиденциальности
 description: Как сайт обрабатывает данные посетителей
+draft: false
+showFeaturedImage: true
+dynamicPostCardHeight: false
+comments: true
+toc: true
+pinned: false
+math: false
+unlisted: false
+unlistedHideFromSeo: true
+showInNav: false
 ---
-
 Последнее обновление: 17 июля 2026 года.
 
 Этот сайт не собирает и не хранит персональные данные посетителей. Мы не
@@ -17,8 +26,8 @@ description: Как сайт обрабатывает данные посети�
 сведения об устройстве, запрошенный адрес и время запроса. Такая обработка
 регулируется политиками соответствующих сервисов:
 
-- [GitHub Privacy Statement](https://docs.github.com/site-policy/privacy-policies/github-privacy-statement)
-- [Cloudflare Privacy Policy](https://www.cloudflare.com/privacypolicy/)
+* [GitHub Privacy Statement](https://docs.github.com/site-policy/privacy-policies/github-privacy-statement)
+* [Cloudflare Privacy Policy](https://www.cloudflare.com/privacypolicy/)
 
 ## Комментарии в Telegram
 
@@ -27,7 +36,7 @@ description: Как сайт обрабатывает данные посети�
 обрабатывать ваши данные, включая данные учетной записи и технические данные,
 в соответствии со своей политикой конфиденциальности:
 
-- [Политика конфиденциальности Telegram](https://telegram.org/privacy)
+* [Политика конфиденциальности Telegram](https://telegram.org/privacy)
 
 Автор сайта не получает и не хранит данные вашей учетной записи Telegram,
 кроме сведений, которые вы самостоятельно публикуете в обсуждении.
