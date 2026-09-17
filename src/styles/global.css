@@ -686,6 +686,60 @@
   }
 }
 
+/* ---------- Privacy notice ---------- */
+@layer components {
+  .privacy-notice {
+    @apply border-base-300 bg-base-100 text-base-content/80 fixed right-4 bottom-4 left-4 z-40 flex items-center gap-3 rounded-md border px-4 py-3 text-sm shadow-lg sm:right-auto sm:max-w-md lg:bottom-6;
+  }
+  @media (min-width: 1024px) {
+    .privacy-notice {
+      left: calc(var(--width-sidebar) + 1.5rem);
+    }
+  }
+  @media (min-width: 1650px) {
+    .privacy-notice {
+      left: calc(var(--width-sidebar-lg) + 1.5rem);
+    }
+  }
+  .privacy-notice p {
+    @apply m-0 leading-snug;
+  }
+  .privacy-notice a {
+    @apply text-primary underline underline-offset-2 hover:underline;
+  }
+  .privacy-notice__accept {
+    @apply bg-primary text-primary-content hover:bg-primary/90 shrink-0 rounded-md px-3 py-1.5 text-sm font-semibold transition;
+  }
+
+  /* Make the notice stand out from the page: use the dark palette in the
+     light theme and the light palette in the dark theme. */
+  [data-theme='chirpy-light'] .privacy-notice {
+    background-color: oklch(22% 0.005 264);
+    border-color: oklch(28% 0.008 264);
+    color: oklch(86% 0.01 264);
+  }
+  [data-theme='chirpy-light'] .privacy-notice a {
+    color: oklch(76% 0.18 264);
+  }
+  [data-theme='chirpy-light'] .privacy-notice__accept {
+    background-color: oklch(76% 0.18 264);
+    color: oklch(15% 0.015 264);
+  }
+
+  [data-theme='chirpy-dark'] .privacy-notice {
+    background-color: oklch(100% 0 0);
+    border-color: oklch(91% 0.0025 264);
+    color: oklch(20% 0.012 264);
+  }
+  [data-theme='chirpy-dark'] .privacy-notice a {
+    color: oklch(45% 0.135 264);
+  }
+  [data-theme='chirpy-dark'] .privacy-notice__accept {
+    background-color: oklch(45% 0.135 264);
+    color: oklch(99% 0.003 264);
+  }
+}
+
 /* ---------- Reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {
   *,

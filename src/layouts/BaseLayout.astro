@@ -8,6 +8,7 @@ import Footer from '../components/Footer.astro';
 import Panel from '../components/Panel.astro';
 import SEO from '../components/SEO.astro';
 import BackToTop from '../components/islands/BackToTop.astro';
+import PrivacyNotice from '../components/islands/PrivacyNotice.astro';
 import { ClientRouter } from 'astro:transitions';
 import faviconImg from '../assets/images/site/favicon.png';
 import favicon64Img from '../assets/images/site/favicon64.png';
@@ -207,5 +208,6 @@ const contentGridClass = hidePanel
     </div>
 
     <BackToTop />
+    <PrivacyNotice />
   </body>
 </html>

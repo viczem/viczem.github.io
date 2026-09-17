@@ -1,0 +1,46 @@
+<script>
+  const STORAGE_KEY = 'privacy-notice-accepted';
+  const privacyUrl = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/privacy/`;
+
+  function setupPrivacyNotice() {
+    if (document.querySelector('[data-privacy-notice]')) return;
+
+    try {
+      if (localStorage.getItem(STORAGE_KEY) === 'true') return;
+    } catch {
+      /* Keep the notice visible when localStorage is unavailable. */
+    }
+
+    const notice = document.createElement('aside');
+    notice.className = 'privacy-notice';
+    notice.setAttribute('aria-label', 'Уведомление о политике конфиденциальности');
+    notice.dataset.privacyNotice = '';
+
+    const text = document.createElement('p');
+    text.append('Продолжая пользоваться сайтом, вы принимаете политику конфиденциальности. ');
+
+    const link = document.createElement('a');
+    link.href = privacyUrl;
+    link.textContent = 'Ознакомиться с политикой';
+    text.append(link, '.');
+
+    const acceptButton = document.createElement('button');
+    acceptButton.type = 'button';
+    acceptButton.className = 'privacy-notice__accept';
+    acceptButton.textContent = 'ОК';
+    acceptButton.addEventListener('click', () => {
+      try {
+        localStorage.setItem(STORAGE_KEY, 'true');
+      } catch {
+        /* The notice is still dismissed for the current page. */
+      }
+      notice.remove();
+    });
+
+    notice.append(text, acceptButton);
+    document.body.append(notice);
+  }
+
+  setupPrivacyNotice();
+  document.addEventListener('astro:page-load', setupPrivacyNotice);
+</script>
