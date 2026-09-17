@@ -25,7 +25,7 @@ import { rehypeTableWrapper } from './src/plugins/rehype-table-wrapper.ts';
 import { SITE } from './src/config';
 
 const rawBase = (process.env.BASE_PATH ?? '/').replace(/\/$/, '');
-const BASE = rawBase.startsWith('/') ? rawBase : `/${rawBase}`;
+const BASE = rawBase === '' ? '' : rawBase.startsWith('/') ? rawBase : `/${rawBase}`;
 const SITEMAP_XSL_HREF = `${BASE}/sitemap/styles.xsl`;
 const SKIP_RSS_SITEMAP = process.env.CI_SKIP_RSS_SITEMAP === 'true';
 
