@@ -70,8 +70,9 @@ heroImageAlt: Описание изображения
 ```
 
 Если `heroImage` не задан, в Open Graph и Schema.org автоматически используется
-`SITE.defaultOgImage` из `src/config.ts`. Отдельные изображения для каждого поста при
-сборке не генерируются.
+квадратная иконка `SITE.defaultOgImage` из `src/config.ts`. Поэтому Telegram показывает
+её как компактную миниатюру, а не как широкую обложку. Отдельные изображения для каждого
+поста при сборке не генерируются.
 
 Страницы публикаций содержат метаданные Open Graph, Twitter Card и Schema.org
 `BlogPosting`, а также стабильные классы `post-title`, `post-description`,

@@ -11,6 +11,7 @@ const { meta } = Astro.props;
 
 const primaryFeed = { href: withBase('/rss.xml'), title: `${SITE.title} — RSS` };
 const sitemapHref = withBase('/sitemap-index.xml');
+const siteDomain = new URL(SITE.url).hostname;
 ---
 
 <title>{meta.title}</title>
@@ -29,8 +30,8 @@ const sitemapHref = withBase('/sitemap-index.xml');
 <link rel="sitemap" type="application/xml" href={sitemapHref} />
 
 {/* Open Graph */}
-<meta property="og:site_name" content={SITE.title} />
-<meta property="og:title" content={meta.title} />
+<meta property="og:site_name" content={siteDomain} />
+<meta property="og:title" content={meta.ogTitle} />
 <meta property="og:description" content={meta.description} />
 <meta property="og:type" content={meta.type} />
 <meta property="og:url" content={meta.canonical} />
@@ -41,8 +42,8 @@ const sitemapHref = withBase('/sitemap-index.xml');
 <meta property="og:locale" content="ru_RU" />
 
 {/* Twitter */}
-<meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content={meta.title} />
+<meta name="twitter:card" content={meta.twitterCard} />
+<meta name="twitter:title" content={meta.ogTitle} />
 <meta name="twitter:description" content={meta.description} />
 <meta name="twitter:image" content={meta.ogImage} />
 
