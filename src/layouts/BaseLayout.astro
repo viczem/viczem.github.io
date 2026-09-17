@@ -103,7 +103,7 @@ const contentGridClass = hidePanel
 <html lang={lang} data-theme="chirpy-light">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="generator" content={Astro.generator} />
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f6f7f8" />
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1b1b1e" />
@@ -175,7 +175,9 @@ const contentGridClass = hidePanel
 
     <Sidebar />
 
-    <div class="min-h-screen min-[1650px]:!ml-(--width-sidebar-lg) lg:ml-(--width-sidebar)">
+    <div
+      class="chirpy-page-shell min-h-screen min-[1650px]:!ml-(--width-sidebar-lg) lg:ml-(--width-sidebar)"
+    >
       <Topbar crumbs={crumbs} />
 
       <div
