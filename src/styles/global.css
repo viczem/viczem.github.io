@@ -387,8 +387,12 @@
     @apply border-base-300 my-10;
   }
   .prose-chirpy code:not(pre code) {
-    @apply bg-base-200 text-accent rounded px-1.5 py-0.5 font-mono text-[0.92em];
+    @apply bg-base-content/5 text-accent rounded px-1.5 py-0.5 font-mono text-[0.92em];
     font-family: var(--font-mono);
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
   }
   [data-theme='chirpy-light'] .prose-chirpy code:not(pre code) {
     color: oklch(48% 0.13 75);
@@ -504,7 +508,7 @@
     @apply bg-transparent p-0;
   }
   .prose-chirpy :not(pre) > code {
-    @apply text-primary bg-base-200 rounded px-1.5 py-0.5 text-[0.9em] font-medium;
+    @apply text-primary bg-base-content/5 rounded px-1.5 py-0.5 text-[0.9em] font-medium;
   }
 }
 

@@ -32,23 +32,21 @@ commitHash: 17c47991485026d1751f813c876bd93b0293c3da
 
 Допустим, сейчас используется ключ № 1:
 
-```
+```text
 1:<старый секрет>
-
 ```
 
 После ротации конфигурация будет выглядеть так:
 
-```
+```text
 -1:<старый секрет>,2:<новый секрет>
-
 ```
 
 Теперь ключ № 2 используется для всех новых операций, а ключ № 1 остаётся доступен для чтения ранее созданных данных.
 
 В `services/userhub/internal/config/keyring.go` состояние keyring хранится без отдельного флага `active` у каждого ключа:
 
-```
+```go
 type Keyring struct {
 	ActiveID int16
 	Keys     map[int16][KeyringKeySize]byte
@@ -60,7 +58,7 @@ type Keyring struct {
 
 При разборе конфигурации знак ID используется только для определения статуса:
 
-```
+```go
 active := rawID > 0
 if active && ring.ActiveID != 0 {
 	return Keyring{}, newError("contains multiple active keys")
